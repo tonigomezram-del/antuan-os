@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Antuan Tienda
+Comment=Todas tus apps de un clic
+Exec=/opt/umbra/umbra --tienda=%f
+Icon=umbra
+Categories=System;PackageManager;
+MimeType=application/x-umbra;

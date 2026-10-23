@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Bienvenida de Antuan
+Comment=Pregunta si instalar Antuan o seguir probandolo (solo en la sesion de prueba)
+Exec=umbra-bienvenida 4
+Icon=umbra
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

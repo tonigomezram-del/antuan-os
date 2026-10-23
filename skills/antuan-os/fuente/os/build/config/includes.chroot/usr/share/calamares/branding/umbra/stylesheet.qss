@@ -1,0 +1,382 @@
+/*
+ * Instalador Antuan: todo oscuro, cristal y esquinas redondeadas.
+ * Fondo #07080b / #0b0d12 · texto #e9ebf1 · secundario #8b91a3 · acento #9db4ff
+ * Las imagenes usan rutas absolutas porque Qt las resuelve desde el directorio
+ * de trabajo, no desde este archivo.
+ */
+
+/* ---------- Base ---------- */
+QWidget {
+    background-color: #0b0d12;
+    color: #e9ebf1;
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-size: 10.5pt;
+    selection-background-color: #9db4ff;
+    selection-color: #0b0d12;
+}
+QLabel, QCheckBox, QRadioButton {
+    background-color: transparent;
+}
+QLabel:disabled, QCheckBox:disabled, QRadioButton:disabled {
+    color: #5a6072;
+}
+QDialog, QMessageBox {
+    background-color: #0b0d12;
+}
+QFrame[frameShape="4"], QFrame[frameShape="5"] {
+    /* lineas separadoras */
+    color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    max-height: 1px;
+}
+
+/* ---------- Barra lateral ---------- */
+#sidebarApp, #sidebarApp QWidget {
+    background-color: #07080b;
+    color: #e9ebf1;
+}
+#sidebarApp {
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+#logoApp {
+    background-color: transparent;
+    padding: 18px 8px 10px 8px;
+}
+#sidebarMenuApp {
+    background-color: #07080b;
+    border: none;
+    padding: 8px 10px;
+    font-size: 11pt;
+    outline: 0;
+}
+#sidebarMenuApp::item {
+    min-height: 34px;
+    padding: 4px 12px;
+    border-radius: 10px;
+    margin: 2px 0;
+}
+#sidebarMenuApp::item:selected {
+    background-color: #9db4ff;
+    color: #0b0d12;
+}
+#aboutButton, #debugButton, #donateButton {
+    background-color: transparent;
+    border: none;
+    color: #8b91a3;
+}
+#aboutButton:hover, #debugButton:hover, #donateButton:hover {
+    color: #e9ebf1;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- Botones ---------- */
+QPushButton, QToolButton {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 8px 18px;
+    min-height: 20px;
+}
+QPushButton:hover, QToolButton:hover {
+    background-color: rgba(255, 255, 255, 0.13);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+QPushButton:pressed, QToolButton:pressed {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+QPushButton:focus, QToolButton:focus {
+    border-color: #9db4ff;
+}
+QPushButton:disabled, QToolButton:disabled {
+    color: #5a6072;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+QToolButton:checked {
+    background-color: rgba(157, 180, 255, 0.22);
+    border-color: rgba(157, 180, 255, 0.55);
+}
+
+/* Boton principal: Siguiente / Instalar / Hecho */
+QPushButton:default, #view-button-next {
+    background-color: #9db4ff;
+    color: #0b0d12;
+    border: 1px solid #9db4ff;
+    font-weight: 600;
+}
+QPushButton:default:hover, #view-button-next:hover {
+    background-color: #b3c4ff;
+    border-color: #b3c4ff;
+}
+QPushButton:default:pressed, #view-button-next:pressed {
+    background-color: #8aa3f0;
+}
+#view-button-next:disabled {
+    background-color: rgba(157, 180, 255, 0.25);
+    border-color: transparent;
+    color: rgba(11, 13, 18, 0.6);
+}
+#view-button-back, #view-button-cancel {
+    min-width: 90px;
+}
+#view-button-cancel:hover {
+    color: #ffb4b8;
+}
+
+/* ---------- Campos de texto ---------- */
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QTextBrowser {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 7px 10px;
+    selection-background-color: #9db4ff;
+    selection-color: #0b0d12;
+}
+QLineEdit:hover, QTextEdit:hover, QPlainTextEdit:hover, QSpinBox:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {
+    border: 1px solid #9db4ff;
+    background-color: rgba(157, 180, 255, 0.07);
+}
+QLineEdit:disabled {
+    color: #5a6072;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+QSpinBox::up-button, QSpinBox::down-button {
+    background: transparent;
+    border: none;
+    width: 18px;
+}
+
+/* ---------- Desplegables ---------- */
+QComboBox {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 7px 34px 7px 12px;
+    min-height: 20px;
+}
+QComboBox:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+QComboBox:focus, QComboBox:on {
+    border-color: #9db4ff;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 30px;
+    border: none;
+    background: transparent;
+}
+QComboBox::down-arrow {
+    image: url(/usr/share/calamares/branding/umbra/flecha.png);
+    width: 16px;
+    height: 16px;
+}
+QComboBox QAbstractItemView {
+    background-color: #11141b;
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 4px;
+    outline: 0;
+    selection-background-color: #9db4ff;
+    selection-color: #0b0d12;
+}
+
+/* ---------- Listas, arboles y tablas ---------- */
+QListView, QListWidget, QTreeView, QTreeWidget, QTableView, QTableWidget {
+    background-color: rgba(255, 255, 255, 0.04);
+    alternate-background-color: rgba(255, 255, 255, 0.02);
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 4px;
+    outline: 0;
+}
+QListView::item, QListWidget::item, QTreeView::item, QTableView::item {
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+QListView::item:hover, QListWidget::item:hover, QTreeView::item:hover, QTableView::item:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+QListView::item:selected, QListWidget::item:selected, QTreeView::item:selected, QTableView::item:selected {
+    background-color: rgba(157, 180, 255, 0.24);
+    color: #e9ebf1;
+}
+QHeaderView, QHeaderView::section {
+    background-color: transparent;
+    color: #8b91a3;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 8px;
+    font-weight: 600;
+}
+QTableCornerButton::section {
+    background: transparent;
+    border: none;
+}
+
+/* Particiones: la barra de colores la dibuja Calamares; solo se aclara el fondo */
+#partitionBarView, #partitionLabelsView {
+    background-color: transparent;
+    border: none;
+}
+
+/* ---------- Casillas y opciones ---------- */
+QCheckBox, QRadioButton {
+    spacing: 9px;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+}
+QCheckBox::indicator {
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: #9db4ff;
+}
+QCheckBox::indicator:checked {
+    background-color: #9db4ff;
+    border-color: #9db4ff;
+    image: url(/usr/share/calamares/branding/umbra/marca.png);
+}
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    border-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+QRadioButton::indicator {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+QRadioButton::indicator:checked {
+    border: 1px solid #9db4ff;
+    background-color: qradialgradient(cx: 0.5, cy: 0.5, radius: 0.5, fx: 0.5, fy: 0.5,
+        stop: 0 #0b0d12, stop: 0.38 #0b0d12, stop: 0.48 #9db4ff, stop: 1 #9db4ff);
+}
+
+/* ---------- Barras de progreso ---------- */
+QProgressBar {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: none;
+    border-radius: 6px;
+    min-height: 12px;
+    max-height: 12px;
+    text-align: center;
+    color: transparent;
+}
+QProgressBar::chunk {
+    border-radius: 6px;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #9db4ff, stop: 1 #b79cff);
+}
+
+/* ---------- Barras de desplazamiento finas ---------- */
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    margin: 2px;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 8px;
+    margin: 2px;
+}
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical { min-height: 32px; }
+QScrollBar::handle:horizontal { min-width: 32px; }
+QScrollBar::handle:hover, QScrollBar::handle:pressed {
+    background-color: rgba(157, 180, 255, 0.65);
+}
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0;
+    height: 0;
+    border: none;
+    background: none;
+}
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+QScrollArea, QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+/* ---------- Grupos, pestanas, menus y avisos ---------- */
+QGroupBox {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin-top: 16px;
+    padding: 14px 12px 12px 12px;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 14px;
+    padding: 0 6px;
+    color: #8b91a3;
+    background-color: transparent;
+}
+QTabWidget::pane {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    top: -1px;
+}
+QTabBar::tab {
+    background: transparent;
+    color: #8b91a3;
+    padding: 8px 16px;
+    border-radius: 10px;
+    margin: 2px;
+}
+QTabBar::tab:selected {
+    background-color: rgba(157, 180, 255, 0.18);
+    color: #e9ebf1;
+}
+QTabBar::tab:hover {
+    color: #e9ebf1;
+}
+QMenu {
+    background-color: #11141b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 18px;
+    border-radius: 8px;
+}
+QMenu::item:selected {
+    background-color: #9db4ff;
+    color: #0b0d12;
+}
+QToolTip {
+    background-color: #11141b;
+    color: #e9ebf1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+/* ---------- Pagina de bienvenida y resumen ---------- */
+#mainText {
+    font-size: 15pt;
+    font-weight: 600;
+}
+#summaryStep, #SummaryPage QLabel {
+    background-color: transparent;
+}

@@ -1,0 +1,5 @@
+*.iso
+*.qcow2
+node_modules/
+dist/
+*-log*.txt

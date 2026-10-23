@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Instalar Antuan
+GenericName=Instalador del sistema
+Comment=Instala Antuan en el disco de tu equipo
+Exec=umbra-instalar
+Icon=umbra
+Terminal=false
+StartupNotify=true
+Categories=System;
+Keywords=instalar;instalador;sistema;disco;umbra;

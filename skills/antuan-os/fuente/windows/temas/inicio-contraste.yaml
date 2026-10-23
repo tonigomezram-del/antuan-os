@@ -1,0 +1,8 @@
+# Antuan Contraste: menu inicio
+styleConstants:
+  - Glass=<WindhawkBlur BlurAmount="10" TintColor="#050608" TintOpacity="0.95" />
+  - Stroke=<SolidColorBrush Color="#99FFFFFF" />
+  - Field=<SolidColorBrush Color="#22FFFFFF" />
+  - Border=1.5
+  - Radius=22
+  - Muted=0.9

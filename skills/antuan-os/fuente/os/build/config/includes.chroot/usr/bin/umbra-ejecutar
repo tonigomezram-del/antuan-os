@@ -1,0 +1,14 @@
+#!/bin/sh
+# Abre programas de Windows (.exe / .msi) en Antuan OS con la capa de compatibilidad integrada (Wine).
+# Todos los programas de Windows comparten un "disco C:" propio en ~/.local/share/umbra/windows.
+export WINEPREFIX="$HOME/.local/share/umbra/windows"
+export WINEDEBUG=-all
+export WINEDLLOVERRIDES="winemenubuilder.exe=d"
+if [ ! -d "$WINEPREFIX" ]; then
+  /opt/umbra/umbra --ui="toast:spark:Preparando la compatibilidad con Windows (solo la primera vez)" 2>/dev/null &
+  wineboot -i >/dev/null 2>&1
+fi
+case "$1" in
+  *.msi|*.MSI) exec wine msiexec /i "$1" ;;
+  *) cd "$(dirname "$1")" && exec gamemoderun wine "$1" ;;
+esac

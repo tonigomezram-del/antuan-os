@@ -1,0 +1,71 @@
+#!/bin/sh
+# Bienvenida de la sesion de prueba de Antuan: a los pocos segundos de entrar
+# pregunta si se quiere instalar Antuan o seguir probandolo sin instalar.
+#
+# Uso: umbra-bienvenida [--esperar-x] [segundos]
+#   --esperar-x  lo usa el servicio de usuario de systemd: espera a que la
+#                sesion grafica este lista y averigua DISPLAY por su cuenta.
+
+# Solo al arrancar desde el pendrive
+grep -qw 'boot=live' /proc/cmdline 2>/dev/null || exit 0
+
+ESPERAR_X=0
+if [ "${1:-}" = "--esperar-x" ]; then ESPERAR_X=1; shift; fi
+ESPERA="${1:-4}"
+
+# Una sola bienvenida por sesion aunque se lance desde dos sitios (mkdir es atomico)
+BLOQUEO="${XDG_RUNTIME_DIR:-/tmp}/umbra-bienvenida.$(id -u)"
+mkdir "$BLOQUEO" 2>/dev/null || exit 0
+
+if [ "$ESPERAR_X" -eq 1 ]; then
+    # Hasta 2 minutos esperando al escritorio Antuan
+    i=0
+    while [ $i -lt 120 ]; do
+        if pgrep -u "$(id -u)" -x openbox >/dev/null 2>&1; then
+            for s in /tmp/.X11-unix/X*; do
+                [ -S "$s" ] && DISPLAY=":${s##*/X}" && break
+            done
+            [ -n "${DISPLAY:-}" ] && break
+        fi
+        i=$((i + 1)); sleep 1
+    done
+    [ -n "${DISPLAY:-}" ] || { rmdir "$BLOQUEO" 2>/dev/null; exit 0; }
+    export DISPLAY
+    [ -z "${XAUTHORITY:-}" ] && [ -f "$HOME/.Xauthority" ] && export XAUTHORITY="$HOME/.Xauthority"
+fi
+
+sleep "$ESPERA"
+
+# Si el usuario ya abrio el instalador por su cuenta, no molestar
+pgrep -x calamares >/dev/null 2>&1 && exit 0
+
+# Dialogo con los colores de Antuan (gtk-4.0/gtk.css dentro de esta carpeta)
+export XDG_CONFIG_HOME=/usr/lib/umbra/instalador
+export ADW_DEBUG_COLOR_SCHEME=prefer-dark
+unset GTK_THEME
+
+TITULO="Antuan"
+TEXTO="<span size='x-large' weight='bold'>Te damos la bienvenida a Antuan</span>
+
+Puedes probar Antuan ahora mismo desde el pendrive, sin cambiar nada de tu equipo, o instalarlo en el disco.
+
+Si decides probarlo, el instalador te espera en <b>Instalar Antuan</b>."
+
+preguntar() {
+    zenity --question --title="$TITULO" --width=460 "$@" --text="$TEXTO" \
+        --ok-label="Instalar Antuan" --cancel-label="Probar Antuan sin instalar"
+}
+
+preguntar --icon=umbra
+rc=$?
+# Por si esta version de zenity no admite --icon
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+    preguntar
+    rc=$?
+fi
+
+if [ "$rc" -eq 0 ]; then
+    unset XDG_CONFIG_HOME ADW_DEBUG_COLOR_SCHEME
+    exec /usr/bin/umbra-instalar
+fi
+exit 0

@@ -1,0 +1,62 @@
+{
+    "name": "umbra-shell",
+    "productName": "Antuan",
+    "version": "1.0.0",
+    "description": "Antuan: tu escritorio propio para Windows",
+    "author": "Toni",
+    "main": "main.js",
+    "private": true,
+    "scripts": {
+        "start": "electron .",
+        "dist": "electron-builder --win nsis",
+        "dist-linux": "electron-builder --linux dir"
+    },
+    "dependencies": {
+        "@lydell/node-pty": "^1.1.0",
+        "@xterm/addon-fit": "^0.10.0",
+        "@xterm/addon-web-links": "^0.11.0",
+        "@xterm/xterm": "^5.5.0",
+        "koffi": "^2.16.3",
+        "potrace": "^2.1.8"
+    },
+    "devDependencies": {
+        "electron": "38.8.6",
+        "electron-builder": "^26.15.3"
+    },
+    "build": {
+        "appId": "com.umbra.shell",
+        "productName": "Antuan",
+        "asar": false,
+        "directories": {
+            "output": "../dist",
+            "buildResources": "build"
+        },
+        "files": [
+            "**/*",
+            "!build/**",
+            "!**/*.md",
+            "!node_modules/**/test/**",
+            "!node_modules/**/*.map"
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "build/icon.png",
+            "artifactName": "Antuan-Instalar.exe"
+        },
+        "nsis": {
+            "oneClick": true,
+            "perMachine": false,
+            "runAfterFinish": true,
+            "createDesktopShortcut": false,
+            "createStartMenuShortcut": true,
+            "shortcutName": "Antuan",
+            "deleteAppDataOnUninstall": false
+        },
+        "linux": {
+            "target": "dir",
+            "executableName": "umbra",
+            "icon": "build/icon.png",
+            "category": "System"
+        }
+    }
+}

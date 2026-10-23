@@ -1,0 +1,8 @@
+#!/bin/sh
+# Envia una orden al escritorio Antuan en marcha (atajos de teclado del gestor de ventanas).
+#   umbra-cmd spotlight | mission | toggle-launcher | quick | clipboard | centro[:seccion] | captura
+case "$1" in
+  centro*) sec="${1#centro}"; sec="${sec#:}"; exec /opt/umbra/umbra --centro${sec:+=$sec} ;;
+  captura) exec umbra-captura ;;
+  *) exec /opt/umbra/umbra --ui="$1" ;;
+esac

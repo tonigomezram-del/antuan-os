@@ -1,0 +1,147 @@
+# --- Base del sistema
+linux-image-amd64
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-amd-graphics
+intel-microcode
+amd64-microcode
+sudo
+locales
+console-setup
+keyboard-configuration
+systemd-timesyncd
+zram-tools
+polkitd pkexec
+dbus-x11
+xdg-utils
+xdg-user-dirs
+
+# --- Grafico (X11 + composicion con cristal real)
+xserver-xorg
+xserver-xorg-video-all
+xserver-xorg-input-all
+x11-xserver-utils
+xinit
+openbox
+picom
+wmctrl
+xdotool
+x11-utils
+maim
+xclip
+librsvg2-bin
+playerctl
+power-profiles-daemon
+iputils-tracepath
+gir1.2-gtk-3.0
+libnss3
+libgbm1
+libasound2t64
+lightdm
+mesa-vulkan-drivers
+mesa-va-drivers
+libgl1-mesa-dri
+
+# --- Arranque bonito
+plymouth
+plymouth-themes
+
+# --- Red, sonido y dispositivos
+network-manager
+bluez
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+pavucontrol
+brightnessctl
+upower
+udisks2
+gvfs
+cups
+printer-driver-all
+
+# --- Instalador
+calamares
+calamares-settings-debian
+
+# --- Apps, paquetes y compatibilidad
+flatpak
+curl
+ca-certificates
+p7zip-full
+unzip
+ffmpegthumbnailer
+tesseract-ocr
+tesseract-ocr-spa
+wine
+wine64
+winetricks
+
+# --- Juegos
+gamemode
+mangohud
+
+# --- Tipografias
+fonts-inter
+fonts-noto
+fonts-noto-color-emoji
+
+# --- Instalador Antuan: diapositivas QML (Calamares 3.3 en Debian 13 usa Qt 6)
+qml6-module-qtquick
+qml6-module-qtquick-window
+qml6-module-qtqml-workerscript
+
+# --- Instalador Antuan: dialogo de bienvenida y permisos
+zenity
+pkexec
+polkitd
+
+# --- Instalador Antuan: arranque sin red (GRUB UEFI y BIOS) y discos
+grub-efi-amd64-bin
+grub-pc-bin
+grub2-common
+efibootmgr
+os-prober
+rsync
+dosfstools
+btrfs-progs
+cryptsetup
+cryptsetup-initramfs
+
+# Navegador
+firefox-esr
+firefox-esr-l10n-es-es
+
+# Crea el usuario de la sesion de prueba (lo usa live-config)
+user-setup
+
+# Pantalla de inicio de sesion Antuan (paquete local en os/paquetes)
+nody-greeter
+
+# Deteccion de aceleracion grafica (glxinfo) para el compositor
+mesa-utils
+
+# Redimensionar particiones de Windows (opcion "Instalar junto a" del instalador)
+ntfs-3g
+
+# --- Antuan: herramientas que usan el dock y el Centro
+# pactl: volumen por app, salidas de audio y privacidad del micro (pipewire-pulse no lo trae)
+pulseaudio-utils
+# Bluetooth: emparejar dispositivos (boton Bluetooth del panel rapido y del Spotlight)
+blueman
+# Pantalla: resolucion y frecuencia (menu del escritorio "Pantalla" y Spotlight)
+arandr
+# Agente de permisos: sin el, pkexec (Tienda con apt, actualizaciones) falla sin pedir la contrasena
+lxpolkit
+
+# Instalador: desempaquetar el sistema y arranque firmado (Secure Boot)
+squashfs-tools
+shim-signed
+grub-efi-amd64-signed
+mokutil
+parted

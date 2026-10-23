@@ -1,0 +1,14 @@
+// Sesion de prueba de Antuan: el usuario "umbra" puede abrir el instalador
+// sin contrasena ni agente de autenticacion. Se borra al instalar.
+polkit.addRule(function (action, subject) {
+    var esInstalador =
+        action.id == "com.github.calamares.calamares.pkexec.run" ||
+        (action.id == "org.freedesktop.policykit.exec" &&
+         action.lookup("program") == "/usr/bin/calamares");
+    // Sin exigir sesion activa: la bienvenida automatica se lanza desde un
+    // servicio de usuario de systemd, que no pertenece a la sesion grafica.
+    // (En la sesion de prueba "umbra" ya tiene sudo sin contrasena.)
+    if (esInstalador && subject.user == "umbra") {
+        return polkit.Result.YES;
+    }
+});

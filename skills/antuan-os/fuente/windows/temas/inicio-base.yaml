@@ -1,0 +1,97 @@
+# Antuan - menu inicio y busqueda (estructura)
+controlStyles:
+  # Superficie principal
+  - target: Border#AcrylicBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: Border#AcrylicOverlay
+    styles:
+      - Visibility=1
+  - target: Border#LayerBorder
+    styles:
+      - Background:=Transparent
+      - BorderThickness=0
+      - CornerRadius=$Radius
+  - target: Border#RootGridDropShadow
+    styles:
+      - CornerRadius=$Radius
+  - target: Border#StartDropShadow
+    styles:
+      - CornerRadius=$Radius
+  - target: StartMenu.StartMenuCompanion#RightCompanion > Grid#CompanionRoot > Border#AcrylicBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  # Busqueda (panel de resultados)
+  - target: Border#AppBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  # Caja de busqueda: pildora plana, sin subrayado
+  - target: StartDocked.SearchBoxToggleButton
+    styles:
+      - CornerRadius=14
+  - target: StartMenu.SearchBoxToggleButton
+    styles:
+      - CornerRadius=14
+  - target: Border#BorderElement
+    styles:
+      - CornerRadius=14
+      - Background:=$Field
+      - BorderThickness=0
+  - target: Border#BorderUnderline
+    styles:
+      - Visibility=1
+  # Orden: fuera "Recomendado", el menu solo muestra lo que tu eliges
+  - target: Grid#TopLevelSuggestionsRoot
+    styles:
+      - Visibility=1
+  - target: Grid#TopLevelSuggestionsListHeader
+    styles:
+      - Visibility=1
+  - target: Grid#TopLevelSuggestionsContainer
+    styles:
+      - Visibility=1
+  - target: Grid#ShowMoreSuggestions
+    styles:
+      - Visibility=1
+  - target: Grid#NoTopLevelSuggestionsText
+    styles:
+      - Visibility=1
+  # Tarjetas de categoria (vista "Todas" del nuevo inicio)
+  - target: StartMenu.CategoryControl > Grid#RootGrid > Border
+    styles:
+      - Background:=$Field
+      - BorderThickness=0
+      - CornerRadius=16
+  # Botones, menus contextuales y tooltips
+  - target: Button
+    styles:
+      - CornerRadius=10
+  - target: MenuFlyoutPresenter > Border
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=14
+  - target: ToolTip > ContentPresenter#LayoutRoot
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=10
+  - target: TextBlock#PinnedListHeaderText
+    styles:
+      - FontWeight=SemiBold
+      - Opacity=$Muted
+  - target: TextBlock#AllListHeadingText
+    styles:
+      - FontWeight=SemiBold
+      - Opacity=$Muted

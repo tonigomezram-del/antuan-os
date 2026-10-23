@@ -1,0 +1,8 @@
+# Antuan Cristal: menu inicio
+styleConstants:
+  - Glass=<WindhawkBlur BlurAmount="34" TintColor="#0B0D12" TintOpacity="0.68" />
+  - Stroke=<LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#40FFFFFF" Offset="0" /><GradientStop Color="#0DFFFFFF" Offset="0.38" /><GradientStop Color="#1AFFFFFF" Offset="1" /></LinearGradientBrush>
+  - Field=<SolidColorBrush Color="#0EFFFFFF" />
+  - Border=1
+  - Radius=22
+  - Muted=0.65

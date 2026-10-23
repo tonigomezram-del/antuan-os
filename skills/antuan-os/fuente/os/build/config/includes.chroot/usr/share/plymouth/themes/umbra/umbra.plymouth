@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Antuan
+Description=Arranque de Antuan
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/umbra
+ScriptFile=/usr/share/plymouth/themes/umbra/umbra.script

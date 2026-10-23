@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; img-src 'self' file: data:">
+<title>Antuan</title>
+<link rel="stylesheet" href="umbra.css">
+<link rel="stylesheet" href="modulos.css">
+</head>
+<body data-edge="bottom">
+
+<div id="boot" aria-hidden="true">
+  <div class="mark">
+    <svg viewBox="0 0 64 64" fill="none" stroke="#e9ebf1" stroke-width="2">
+      <circle class="ring" cx="32" cy="32" r="29"/>
+      <path class="moon" d="M38 12a20 20 0 1 0 0 40a24 24 0 0 1 0-40z" fill="#e9ebf1" stroke="none"/>
+    </svg>
+    <div class="word">antuan</div>
+  </div>
+</div>
+
+<div id="backdrop"></div>
+
+<div class="edge-hint h" data-e="bottom"></div>
+<div class="edge-hint h" data-e="top"></div>
+<div class="edge-hint v" data-e="left"></div>
+<div class="edge-hint v" data-e="right"></div>
+
+<nav id="dock" class="glass liquid anchored hit" aria-label="Dock">
+  <div class="wp"></div>
+  <button class="dock-item launcher-btn" id="launcherBtn" data-tip="Inicio" aria-label="Abrir inicio" aria-expanded="false">
+    <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M14.2 4.6a7.6 7.6 0 1 0 0 14.8a9 9 0 0 1 0-14.8z" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <div class="dock-sep" role="separator"></div>
+  <div id="dockApps" class="dock-group"></div>
+  <div class="dock-sep running-sep" role="separator"></div>
+  <div id="dockRunning" class="dock-group"></div>
+</nav>
+
+<div id="tray" class="glass anchored hit" role="toolbar" aria-label="Estado del sistema">
+  <div class="wp"></div>
+  <button class="tray-btn" id="quickBtn" aria-label="Ajustes rápidos" aria-expanded="false">
+    <span data-icon="wifi"></span><span id="trayVol"><span data-icon="volume"></span></span><span data-icon="battery"></span>
+  </button>
+  <button class="tray-btn" id="clockBtn" aria-label="Notificaciones y calendario" data-tip="Notificaciones y calendario">
+    <span class="clock"><b id="time">--:--</b><span id="date"></span></span>
+  </button>
+</div>
+
+<section id="launcher" class="panel glass" role="dialog" aria-label="Inicio">
+  <label class="search"><span data-icon="search"></span><input id="q" placeholder="Busca apps, ajustes y acciones" autocomplete="off" aria-label="Buscar"><span class="kbd">Esc</span></label>
+  <div class="l-head">
+    <h2 id="lTitle">Fijadas</h2>
+    <div class="seg" id="lSeg" role="group" aria-label="Vista">
+      <span class="pill"></span>
+      <button aria-pressed="true" data-v="pinned">Fijadas</button>
+      <button aria-pressed="false" data-v="all">Todas</button>
+    </div>
+  </div>
+  <div id="lBody"></div>
+  <div class="l-foot">
+    <button class="me" id="meBtn"><span class="avatar" id="avatar">T</span><span id="userName">Tú</span></button>
+    <span class="spacer"></span>
+    <button class="icon-btn" data-launch="archivos" aria-label="Archivos" data-tip="Archivos"><span data-icon="folder"></span></button>
+    <button class="icon-btn" id="umbraSettingsBtn" aria-label="Personalizar" data-tip="Personalizar"><span data-icon="palette"></span></button>
+    <button class="icon-btn" id="centroBtn" aria-label="Centro Antuan" data-tip="Centro Antuan"><span data-icon="dock"></span></button>
+    <button class="icon-btn" data-power="lock" aria-label="Bloquear" data-tip="Bloquear"><span data-icon="lock"></span></button>
+    <button class="icon-btn" id="powerBtn" aria-label="Energía" data-tip="Energía"><span data-icon="power"></span></button>
+  </div>
+  <div id="powerMenu" class="menu glass" role="menu">
+    <button role="menuitem" data-power="sleep"><span data-icon="moon"></span>Suspender</button>
+    <button role="menuitem" data-power="signout"><span data-icon="logout"></span>Cerrar sesión</button>
+    <button role="menuitem" data-power="restart"><span data-icon="restart"></span>Reiniciar</button>
+    <button role="menuitem" data-power="shutdown"><span data-icon="power"></span>Apagar</button>
+  </div>
+</section>
+
+<section id="quick" class="panel glass" role="dialog" aria-label="Ajustes rápidos">
+  <div class="toggles">
+    <button class="tgl" id="tglWifi" data-uri="ms-settings:network-wifi"><span data-icon="wifi"></span><span><b>Wi-Fi</b><small id="wifiName">—</small></span></button>
+    <button class="tgl" data-uri="ms-settings:bluetooth"><span data-icon="bluetooth"></span><span><b>Bluetooth</b><small>Dispositivos</small></span></button>
+    <button class="tgl" id="tglPower"><span data-icon="sun"></span><span><b>Energía</b><small id="powerName">—</small></span></button>
+    <button class="tgl" id="tglAwake"><span data-icon="moon"></span><span><b>Despierto</b><small>No suspender</small></span></button>
+    <button class="tgl" data-uri="ms-settings:nightlight"><span data-icon="sun"></span><span><b>Nocturna</b><small>Luz cálida</small></span></button>
+    <button class="tgl" data-uri="ms-settings:notifications"><span data-icon="bell"></span><span><b>Silencio</b><small>Avisos</small></span></button>
+    <button class="tgl" data-setting="contrast"><span data-icon="contrast"></span><span><b>Contraste</b><small>Alto</small></span></button>
+    <button class="tgl" data-setting="reduceMotion"><span data-icon="motion"></span><span><b>Calma</b><small>Sin rebotes</small></span></button>
+  </div>
+  <div class="slider-row" id="briRow"><span data-icon="sun"></span><input type="range" min="0" max="100" id="bri" aria-label="Brillo"></div>
+  <div class="slider-row"><button class="icon-btn mini" id="muteBtn" aria-label="Silenciar"><span data-icon="volume"></span></button><input type="range" min="0" max="100" id="vol" aria-label="Volumen"><button class="icon-btn mini" id="mixBtn" aria-label="Volumen por app y salida" data-tip="Por app y salida"><span data-icon="arrow"></span></button></div>
+  <div class="mixer" id="mixer"></div>
+  <div class="media" id="media">
+    <div class="cover" id="mCover"><div class="bars"><i></i><i></i><i></i><i></i></div></div>
+    <div class="media-txt"><b id="mTitle">Nada sonando</b><span id="mArtist">Pon música y aparecerá aquí</span></div>
+    <button class="icon-btn" data-mcmd="prev" aria-label="Anterior"><span data-icon="prev"></span></button>
+    <button class="icon-btn" data-mcmd="toggle" id="mPlay" aria-label="Reproducir o pausar"><span data-icon="play"></span></button>
+    <button class="icon-btn" data-mcmd="next" aria-label="Siguiente"><span data-icon="next"></span></button>
+  </div>
+  <div class="q-foot"><span id="batt"><span data-icon="battery"></span> <b id="battPct">--</b><small id="battHealth"></small></span>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="quickUmbra" aria-label="Centro Antuan" data-tip="Centro Antuan"><span data-icon="dock"></span></button>
+    <button class="icon-btn" data-uri="ms-settings:" aria-label="Ajustes de Windows" data-tip="Ajustes de Windows"><span data-icon="gear"></span></button>
+  </div>
+</section>
+
+<section id="calpanel" class="panel glass" role="dialog" aria-label="Calendario">
+  <div class="cp-today"><b id="cpDay"></b><span id="cpDate"></span></div>
+  <div class="cal" id="cal"></div>
+  <div class="q-foot"><button class="btn" id="cpNotif"><span data-icon="bell"></span>Notificaciones</button><span class="spacer"></span><button class="btn" id="cpCal"><span data-icon="calendar"></span>Calendario de Windows</button></div>
+</section>
+
+<section id="settings" class="panel glass" role="dialog" aria-label="Ajustes de Antuan">
+  <div class="split">
+    <nav class="side" id="setSide"></nav>
+    <div class="pane" id="setPane"></div>
+  </div>
+  <button class="icon-btn close-x" id="settingsClose" aria-label="Cerrar"><span data-icon="x"></span></button>
+</section>
+
+<div id="ctx" class="menu glass" role="menu"></div>
+<div id="tip" class="glass" role="tooltip"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="icons.js"></script>
+<script src="umbra.js"></script>
+<script src="spotlight.js"></script>
+<script src="mision.js"></script>
+<script src="extras.js"></script>
+</body>
+</html>

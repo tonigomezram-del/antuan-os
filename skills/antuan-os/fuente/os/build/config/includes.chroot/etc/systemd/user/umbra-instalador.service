@@ -1,0 +1,14 @@
+# Bienvenida de la sesion de prueba de Antuan.
+# umbra-session no procesa /etc/xdg/autostart, asi que este servicio de usuario
+# la lanza cuando el escritorio esta listo. Solo actua al arrancar desde el pendrive.
+[Unit]
+Description=Bienvenida de Antuan (sesion de prueba)
+ConditionKernelCommandLine=boot=live
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/umbra-bienvenida --esperar-x 3
+Restart=no
+
+[Install]
+WantedBy=default.target

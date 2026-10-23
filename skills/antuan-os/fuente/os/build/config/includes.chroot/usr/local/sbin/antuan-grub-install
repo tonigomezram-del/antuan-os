@@ -1,0 +1,8 @@
+#!/bin/sh
+# Instala GRUB sin escribir en la memoria de arranque de la placa (NVRAM):
+# algunas placas (HP) se cuelgan al encontrar una entrada nueva. Con --removable el arranque va a
+# \EFI\BOOT\BOOTX64.EFI (shim firmado si hay Secure Boot), la ruta que toda placa UEFI arranca por defecto.
+case " $* " in
+  *" --target=x86_64-efi "*|*"x86_64-efi"*) exec grub-install --removable --no-nvram "$@" ;;
+  *) exec grub-install "$@" ;;
+esac

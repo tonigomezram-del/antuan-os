@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Programa de Windows
+Comment=Abre programas de Windows en Antuan
+Exec=umbra-ejecutar %f
+Icon=umbra
+NoDisplay=true
+MimeType=application/x-ms-dos-executable;application/x-msdownload;application/x-msi;application/x-ms-shortcut;application/vnd.microsoft.portable-executable;

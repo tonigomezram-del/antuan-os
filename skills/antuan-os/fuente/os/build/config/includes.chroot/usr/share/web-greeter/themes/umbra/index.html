@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antuan</title>
+<style>
+:root { --text: #e9ebf1; --muted: #8b91a3; --faint: #5a6072; --accent: #9db4ff; --accent-rgb: 157,180,255;
+  --spring: cubic-bezier(.34,1.45,.55,1); --ease: cubic-bezier(.22,1,.36,1); color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #07080b; color: var(--text);
+  font: 15px/1.4 "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Fondo vivo: auroras que se mueven muy despacio */
+#bg { position: fixed; inset: -10%; background:
+  radial-gradient(40% 50% at 20% 85%, rgba(72,84,196,.55), transparent 70%),
+  radial-gradient(35% 40% at 85% 12%, rgba(28,140,150,.35), transparent 70%),
+  radial-gradient(30% 35% at 60% 55%, rgba(124,72,196,.30), transparent 70%), #07080b;
+  animation: drift 40s ease-in-out infinite alternate; filter: saturate(1.1); }
+@keyframes drift { to { transform: translate(3%, -2%) scale(1.06) rotate(1deg); } }
+#bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 50%, rgba(0,0,0,.6)); }
+body.unlocking #bg { filter: blur(30px) brightness(.6); transition: filter .8s var(--ease); }
+
+/* Reloj grande (pantalla de bloqueo) */
+#lock { position: fixed; inset: 0; display: grid; place-items: center; transition: opacity .6s var(--ease), transform .7s var(--ease); }
+#lock .t { font: 200 132px/1 "Inter", "Segoe UI Variable Display", sans-serif; letter-spacing: -.04em; text-align: center; font-variant-numeric: tabular-nums; }
+#lock .d { text-align: center; color: rgba(233,235,241,.75); font-size: 19px; margin-top: 6px; text-transform: capitalize; }
+#lock .hint { position: fixed; bottom: 46px; left: 0; right: 0; text-align: center; color: var(--faint); font-size: 13px; animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .4; } }
+body.auth #lock { opacity: 0; transform: translateY(-40px) scale(.98); pointer-events: none; }
+
+/* Panel de acceso */
+#auth { position: fixed; inset: 0; display: grid; place-items: center; opacity: 0; pointer-events: none; transform: translateY(30px); transition: opacity .5s var(--ease), transform .6s var(--spring); }
+body.auth #auth { opacity: 1; pointer-events: auto; transform: none; }
+.card { width: 340px; display: grid; justify-items: center; gap: 14px; }
+.avatar { width: 108px; height: 108px; border-radius: 50%; display: grid; place-items: center; font: 600 40px "Inter", sans-serif; color: #0b0d12;
+  background: linear-gradient(140deg, rgba(var(--accent-rgb),.95), #5a4bd6); box-shadow: 0 20px 50px -14px rgba(var(--accent-rgb),.55), 0 0 0 6px rgba(255,255,255,.06); }
+.name { font-size: 22px; font-weight: 600; }
+.pass { position: relative; width: 100%; height: 48px; display: flex; align-items: center; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)), rgba(12,14,20,.45); backdrop-filter: blur(24px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); transition: box-shadow .2s; }
+.pass:focus-within { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb),.7), 0 0 0 4px rgba(var(--accent-rgb),.14); }
+.pass input { flex: 1; height: 100%; padding: 0 16px; background: none; border: 0; outline: none; font-size: 15px; letter-spacing: .1em; }
+.pass input::placeholder { letter-spacing: 0; color: var(--faint); }
+.pass button { width: 40px; height: 40px; margin-right: 4px; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: #0b0d12; transition: transform .2s var(--spring); }
+.pass button:active { transform: scale(.9); }
+.card.shake { animation: shake .45s var(--ease); }
+@keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+.msg { min-height: 20px; font-size: 13px; color: #ff9aa0; }
+.users { display: flex; gap: 10px; margin-top: 6px; }
+.users button { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.users button.on { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* Barra inferior */
+#bar { position: fixed; left: 24px; right: 24px; bottom: 22px; display: flex; align-items: center; gap: 8px; }
+#bar .brand { display: flex; align-items: center; gap: 10px; color: rgba(233,235,241,.7); letter-spacing: .4em; font-weight: 300; font-size: 13px; }
+#bar .brand svg { width: 20px; height: 20px; }
+#bar .sp { flex: 1; }
+.pb { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; color: rgba(233,235,241,.75); transition: background .15s; }
+.pb:hover { background: rgba(255,255,255,.08); color: #fff; }
+body.unlocking #auth, body.unlocking #bar { opacity: 0; transform: scale(1.04); transition: opacity .5s, transform .6s var(--ease); }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<section id="lock"><div><div class="t" id="t">--:--</div><div class="d" id="d"></div></div><div class="hint">Pulsa una tecla o haz clic para entrar</div></section>
+<section id="auth">
+  <form class="card" id="card" autocomplete="off">
+    <div class="avatar" id="av">U</div>
+    <div class="name" id="nm">Usuario</div>
+    <label class="pass"><input id="pw" type="password" placeholder="Contraseña" aria-label="Contraseña"><button type="submit" aria-label="Entrar"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></label>
+    <div class="msg" id="msg"></div>
+    <div class="users" id="users"></div>
+  </form>
+</section>
+<footer id="bar">
+  <span class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M14.2 4.6a7.6 7.6 0 1 0 0 14.8a9 9 0 0 1 0-14.8z" fill="currentColor" stroke="none"/></svg>antuan</span>
+  <span class="sp"></span>
+  <button class="pb" id="sleep" title="Suspender"><svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="pb" id="restart" title="Reiniciar"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+  <button class="pb" id="off" title="Apagar"><svg class="i" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></button>
+</footer>
+<script>
+// El gestor de inicio (nody-greeter) crea window.lightdm y avisa con "GreeterReady"; puede llegar despues
+// de cargar la pagina. Si en 2 s no aparece, es una vista previa fuera del gestor y se simula.
+let iniciado = false;
+function iniciar(real) {
+if (iniciado) return; iniciado = true;
+// Vista previa: simulacion para poder ver el diseno.
+const L = real || {
+  users: [{ username: 'toni', display_name: 'Toni' }],
+  authenticate(u) { this._u = u; setTimeout(() => this.show_prompt && this.show_prompt('Password:', 1), 50); },
+  respond(p) { setTimeout(() => { this.is_authenticated = p === 'umbra'; this.authentication_complete && this.authentication_complete(); }, 400); },
+  cancel_authentication() {}, start_session() { document.body.innerHTML = ''; },
+  suspend() {}, restart() {}, shutdown() {}, can_suspend: true, can_restart: true, can_shutdown: true
+};
+const $ = (s) => document.querySelector(s);
+const users = L.users && L.users.length ? L.users : [{ username: 'umbra', display_name: 'Antuan' }];
+let cur = users[0];
+
+function clock() {
+  const d = new Date();
+  $('#t').textContent = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  $('#d').textContent = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+clock(); setInterval(clock, 5000);
+
+function pick(u) {
+  cur = u;
+  const n = u.display_name || u.username;
+  $('#nm').textContent = n; $('#av').textContent = n[0].toUpperCase();
+  [...document.querySelectorAll('.users button')].forEach((b) => b.classList.toggle('on', b.dataset.u === u.username));
+  $('#msg').textContent = '';
+  try { L.cancel_authentication(); } catch {}
+  L.authenticate(u.username);
+}
+$('#users').innerHTML = users.length > 1 ? users.map((u) => `<button type="button" data-u="${u.username}" title="${u.display_name || u.username}">${(u.display_name || u.username)[0].toUpperCase()}</button>`).join('') : '';
+$('#users').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) pick(users.find((u) => u.username === b.dataset.u)); });
+
+function open() { if (document.body.classList.contains('auth')) return; document.body.classList.add('auth'); setTimeout(() => $('#pw').focus(), 200); }
+addEventListener('keydown', (e) => { if (!document.body.classList.contains('auth')) { open(); } else if (e.key === 'Escape') document.body.classList.remove('auth'); });
+$('#lock').addEventListener('click', open);
+
+// Avisos del gestor: en nody-greeter son senales (.connect); en la vista previa, funciones normales
+function escuchar(nombre, fn) {
+  const s = L[nombre];
+  if (s && typeof s.connect === 'function') s.connect(fn); else { L[nombre] = fn; window[nombre] = fn; }
+}
+escuchar('show_prompt', () => {});
+escuchar('show_message', (t) => { $('#msg').textContent = t; });
+escuchar('authentication_complete', () => {
+  if (L.is_authenticated) {
+    document.body.classList.add('unlocking');
+    setTimeout(() => L.start_session('umbra'), 650);
+  } else {
+    $('#msg').textContent = 'Contraseña incorrecta';
+    $('#card').classList.remove('shake'); void $('#card').offsetWidth; $('#card').classList.add('shake');
+    $('#pw').value = ''; $('#pw').focus();
+    L.authenticate(cur.username);
+  }
+});
+$('#card').addEventListener('submit', (e) => { e.preventDefault(); L.respond($('#pw').value); });
+$('#sleep').onclick = () => L.suspend(); $('#restart').onclick = () => L.restart(); $('#off').onclick = () => L.shutdown();
+pick(cur);
+if (location.hash === '#auth') open();
+}
+if (window.lightdm) iniciar(window.lightdm);
+else {
+  window.addEventListener('GreeterReady', () => iniciar(window.lightdm));
+  setTimeout(() => iniciar(window.lightdm || null), 2000);
+}
+</script>
+</body>
+</html>

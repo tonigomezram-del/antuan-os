@@ -1,0 +1,54 @@
+# Ventanas Antuan: barra de titulo oscura, limpia y sin bordes gruesos
+border.width: 0
+padding.width: 10
+padding.height: 6
+window.handle.width: 0
+window.client.padding.width: 0
+window.client.padding.height: 0
+
+window.active.title.bg: flat solid
+window.active.title.bg.color: #12141b
+window.inactive.title.bg: flat solid
+window.inactive.title.bg.color: #0e1015
+window.active.label.bg: parentrelative
+window.inactive.label.bg: parentrelative
+window.active.label.text.color: #e9ebf1
+window.inactive.label.text.color: #6b7184
+window.label.text.justify: center
+window.active.label.text.font: shadow=n
+window.inactive.label.text.font: shadow=n
+
+window.active.button.unpressed.bg: parentrelative
+window.active.button.unpressed.image.color: #c9cdd8
+window.active.button.hover.bg: flat solid
+window.active.button.hover.bg.color: #262a36
+window.active.button.hover.image.color: #ffffff
+window.active.button.pressed.bg: flat solid
+window.active.button.pressed.bg.color: #1c1f28
+window.active.button.pressed.image.color: #ffffff
+window.inactive.button.unpressed.bg: parentrelative
+window.inactive.button.unpressed.image.color: #5a6072
+window.inactive.button.hover.bg: flat solid
+window.inactive.button.hover.bg.color: #1c1f28
+window.inactive.button.hover.image.color: #c9cdd8
+window.active.handle.bg: flat solid
+window.active.handle.bg.color: #12141b
+window.inactive.handle.bg: flat solid
+window.inactive.handle.bg.color: #0e1015
+window.active.grip.bg: parentrelative
+window.inactive.grip.bg: parentrelative
+
+menu.border.width: 0
+menu.items.bg: flat solid
+menu.items.bg.color: #12141b
+menu.items.text.color: #e9ebf1
+menu.items.active.bg: flat solid
+menu.items.active.bg.color: #232838
+menu.items.active.text.color: #ffffff
+menu.title.bg: flat solid
+menu.title.bg.color: #12141b
+menu.title.text.color: #8b91a3
+menu.separator.color: #232631
+osd.bg: flat solid
+osd.bg.color: #12141b
+osd.label.text.color: #e9ebf1

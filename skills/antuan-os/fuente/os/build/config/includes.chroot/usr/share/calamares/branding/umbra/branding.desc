@@ -1,0 +1,53 @@
+# Marca del Instalador Antuan (Calamares 3.3)
+---
+componentName:  umbra
+
+# Bienvenida con los colores de la barra lateral y la imagen ocupando el espacio libre
+welcomeStyleCalamares:   false
+welcomeExpandingLogo:    true
+
+# Ventana del instalador
+windowExpanding:    normal
+windowSize:         1100px,720px
+windowPlacement:    center
+
+# Barra lateral y navegacion con widgets (los estiliza stylesheet.qss)
+sidebar:            widget
+navigation:         widget
+
+strings:
+    productName:         "Antuan"
+    shortProductName:    "Antuan"
+    version:             "1.0"
+    shortVersion:        "1.0"
+    versionedName:       "Antuan 1.0"
+    shortVersionedName:  "Antuan 1.0"
+    bootloaderEntryName: "Antuan"
+    productUrl:          "https://umbra.local"
+    supportUrl:          ""
+    knownIssuesUrl:      ""
+    releaseNotesUrl:     ""
+    donateUrl:           ""
+
+images:
+    # Luna blanca sobre transparente (arriba de la barra lateral)
+    productLogo:         "logo.png"
+    # Icono de la ventana: luna sobre baldosa oscura
+    productIcon:         "icono.png"
+    # Imagen de la pantalla de bienvenida: auroras y la palabra umbra (1200x480)
+    productWelcome:      "bienvenida.png"
+
+# Diapositivas mientras se instala (5, cambian cada 7 s con fundido)
+slideshow:               "show.qml"
+slideshowAPI:            2
+
+# Colores de la barra lateral. Se incluyen los nombres antiguos y los de 3.3.
+style:
+   sidebarBackground:        "#07080b"
+   sidebarText:              "#e9ebf1"
+   sidebarTextSelect:        "#0b0d12"
+   sidebarTextHighlight:     "#9db4ff"
+   SidebarBackground:        "#07080b"
+   SidebarText:              "#e9ebf1"
+   SidebarTextCurrent:       "#0b0d12"
+   SidebarBackgroundCurrent: "#9db4ff"

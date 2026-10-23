@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:">
+<title>Terminal</title>
+<link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
+<style>
+:root { --text: #e9ebf1; --muted: #8b91a3; --faint: #5a6072; --accent: #9db4ff; --accent-rgb: 157,180,255;
+  --spring: cubic-bezier(.34,1.45,.55,1); --ease: cubic-bezier(.22,1,.36,1); color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: rgba(9,11,15,.86); color: var(--text);
+  font: 13px "Segoe UI Variable Text", "Inter", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
+svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Barra de pestanas (arrastrable; deja hueco a la derecha para los botones de ventana) */
+#top { height: 46px; display: flex; align-items: center; gap: 6px; padding: 0 150px 0 12px; -webkit-app-region: drag; }
+#tabs { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+.tab { -webkit-app-region: no-drag; position: relative; display: flex; align-items: center; gap: 8px; height: 32px; max-width: 220px; padding: 0 8px 0 12px; border-radius: 10px;
+  color: var(--muted); transition: background .15s, color .15s; animation: tabIn .35s var(--spring); }
+@keyframes tabIn { from { opacity: 0; transform: translateY(-6px) scale(.96); } }
+.tab:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.tab.on { background: rgba(255,255,255,.08); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.tab.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px; border-radius: 2px; background: var(--accent); opacity: .8; }
+.tab .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab .x { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; opacity: 0; transition: opacity .15s, background .15s; }
+.tab:hover .x, .tab.on .x { opacity: .7; }
+.tab .x:hover { opacity: 1; background: rgba(255,255,255,.1); }
+.tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; box-shadow: 0 0 8px var(--accent); }
+.tab.done .dot { background: var(--faint); box-shadow: none; }
+#nueva { -webkit-app-region: no-drag; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); flex: none; transition: background .15s, color .15s, transform .2s var(--spring); }
+#nueva:hover { background: rgba(255,255,255,.07); color: var(--text); }
+#nueva:active { transform: scale(.9); }
+
+/* Zona de terminal */
+#stage { position: absolute; top: 46px; left: 0; right: 0; bottom: 0; }
+.term { position: absolute; inset: 4px 6px 8px 14px; opacity: 0; pointer-events: none; transition: opacity .18s; }
+.term.on { opacity: 1; pointer-events: auto; }
+.xterm .xterm-viewport { background: transparent !important; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; }
+.xterm-screen { -webkit-font-smoothing: antialiased; }
+
+/* Menu contextual y aviso */
+#menu { position: fixed; z-index: 50; min-width: 190px; padding: 6px; border-radius: 13px; display: none; gap: 1px;
+  background: rgba(17,19,26,.97); box-shadow: 0 20px 50px -14px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.08); }
+#menu.open { display: grid; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: scale(.96); } }
+#menu button { display: flex; justify-content: space-between; gap: 16px; padding: 8px 10px; border-radius: 8px; text-align: left; }
+#menu button:hover { background: rgba(255,255,255,.08); }
+#menu kbd { font: 11px inherit; color: var(--faint); }
+#aviso { position: fixed; left: 50%; bottom: 22px; translate: -50% 16px; padding: 8px 16px; border-radius: 99px; background: rgba(22,24,32,.96); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); opacity: 0; pointer-events: none; transition: opacity .2s, translate .35s var(--spring); }
+#aviso.show { opacity: 1; translate: -50% 0; }
+</style>
+</head>
+<body>
+<div id="top"><div id="tabs"></div><button id="nueva" title="Nueva pestaña (Ctrl+Mayús+T)"></button></div>
+<div id="stage"></div>
+<div id="menu"></div>
+<div id="aviso"></div>
+<script src="icons.js"></script>
+<script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+<script src="terminal.js"></script>
+</body>
+</html>

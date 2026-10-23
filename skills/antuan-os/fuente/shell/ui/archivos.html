@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; img-src 'self' file: data: blob:; media-src file: data: blob:; frame-src file:; object-src file:">
+<title>Archivos</title>
+<link rel="stylesheet" href="archivos.css">
+</head>
+<body>
+<aside id="side">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M14.2 4.6a7.6 7.6 0 1 0 0 14.8a9 9 0 0 1 0-14.8z" fill="currentColor" stroke="none"/></svg>
+    <span>Archivos</span>
+  </div>
+  <nav id="places"></nav>
+</aside>
+<main id="main">
+  <header id="bar">
+    <div class="navs">
+      <button class="tb" id="back" title="Atrás (Alt+←)"></button>
+      <button class="tb" id="fwd" title="Adelante (Alt+→)"></button>
+      <button class="tb" id="up" title="Subir (Retroceso)"></button>
+    </div>
+    <div id="crumbs"></div>
+    <label id="find"><span class="fi"></span><input id="q" type="search" placeholder="Buscar" spellcheck="false"></label>
+    <div class="seg" id="views">
+      <button data-v="grid" title="Cuadrícula (Ctrl+1)"></button>
+      <button data-v="list" title="Lista (Ctrl+2)"></button>
+    </div>
+    <button class="tb" id="togglePrev" title="Panel de vista previa (Ctrl+P)"></button>
+  </header>
+  <section id="body">
+    <div id="scroller" tabindex="0">
+      <div id="lhead"></div>
+      <div id="items"></div>
+      <div id="band"></div>
+    </div>
+    <aside id="preview"></aside>
+  </section>
+  <footer id="status"><span id="count"></span><span id="selinfo"></span><span id="hint"></span></footer>
+</main>
+<div id="menu" role="menu"></div>
+<div id="ql" aria-hidden="true"><div class="ql-card"><div class="ql-head"><span class="ql-name"></span><span class="ql-meta"></span><button class="tb ql-open" title="Abrir"></button><button class="tb ql-x" title="Cerrar (Esc)"></button></div><div class="ql-body"></div></div><button class="ql-nav prev"></button><button class="ql-nav next"></button></div>
+<div id="toast"></div>
+<script src="icons.js"></script>
+<script src="archivos.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Asociaciones de archivos: .exe/.msi -> compatibilidad Windows; .umbra -> Antuan Tienda; carpetas -> Archivos Antuan
+set -e
+chmod 755 /usr/bin/umbra-ejecutar
+update-mime-database /usr/share/mime || true
+update-desktop-database /usr/share/applications || true
+cat > /etc/xdg/mimeapps.list <<'EOF'
+[Default Applications]
+application/x-umbra=umbra-tienda.desktop
+application/x-ms-dos-executable=umbra-ejecutar.desktop
+application/x-msdownload=umbra-ejecutar.desktop
+application/x-msi=umbra-ejecutar.desktop
+application/vnd.microsoft.portable-executable=umbra-ejecutar.desktop
+inode/directory=umbra-archivos.desktop
+EOF
+cat > /usr/share/applications/umbra-archivos.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Archivos
+Comment=Tus archivos y carpetas
+Exec=umbra-archivos %f
+Icon=umbra
+Categories=System;FileManager;
+MimeType=inode/directory;
+EOF

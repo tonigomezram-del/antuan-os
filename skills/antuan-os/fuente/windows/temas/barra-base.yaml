@@ -1,0 +1,185 @@
+# Antuan - barra de tareas (estructura)
+# Las variables ($Glass, $Radius...) vienen del archivo de variante:
+# barra-cristal.yaml o barra-contraste.yaml
+controlStyles:
+  - target: Taskbar.TaskbarFrame > Grid#RootGrid@DockingStates
+    styles:
+      - Tag=horizontal
+      - Tag@DockedLeft=vertical
+      - Tag@DockedRight=vertical
+      - Tag=>umbraDock
+  - target: Taskbar.TaskbarFrame
+    styles:
+      - Width={{umbraDock==`vertical`?skip():`Auto`}}
+      - HorizontalAlignment=Center
+  - target: Taskbar.TaskbarFrame > Grid#RootGrid
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+      - Margin=$Gap
+      - Padding=3
+  # Sin hueco del boton de widgets (el tiempo): el dock solo mide lo que ocupan sus iconos
+  - target: Taskbar.AugmentedEntryPointButton#AugmentedEntryPointButton
+    styles:
+      - Visibility=1
+  - target: Rectangle#BackgroundFill
+    styles:
+      - Visibility=1
+  - target: Rectangle#BackgroundStroke
+    styles:
+      - Visibility=1
+  - target: StackPanel#SystemTrayFrameGrid, Grid#SystemTrayFrameGrid
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+      - Margin=$Gap
+      - Padding=4,0
+  - target: Grid#IconPanel@CommonStates > Border#BackgroundElement, Taskbar.TaskListLabeledButtonPanel@CommonStates > Border#BackgroundElement
+    styles:
+      - CornerRadius=$ItemRadius
+      - BorderThickness=0
+      - Margin=2
+      - Background@ActiveNormal:=$Active
+      - Background@ActivePointerOver:=$Hover
+      - Background@ActivePressed:=$Pressed
+      - Background@InactivePointerOver:=$Hover
+      - Background@InactivePressed:=$Pressed
+      - Background@MultiWindowActive:=$Active
+      - Background@MultiWindowPointerOver:=$Hover
+      - Background@MultiWindowPressed:=$Pressed
+      - BackgroundTransition:=$Fade
+  - target: Border#MultiWindowElement
+    styles:
+      - CornerRadius=$ItemRadius
+      - Margin=2
+      - BorderThickness=0
+      - Background:=$Pressed
+  - target: Taskbar.TaskListButtonPanel#ExperienceToggleButtonRootPanel
+    styles:
+      - Background:=Transparent
+  - target: Taskbar.TaskListButtonPanel#ExperienceToggleButtonRootPanel > Grid > Border#BackgroundElement, Taskbar.TaskListButtonPanel#ExperienceToggleButtonRootPanel > Border#BackgroundElement
+    styles:
+      - CornerRadius=$ItemRadius
+      - BorderThickness=0
+      - Margin=2
+  - target: Taskbar.TaskListButton#TaskListButton
+    styles:
+      - CornerRadius=$ItemRadius
+  - target: Rectangle#RunningIndicator
+    styles:
+      - Fill:=$Accent
+      - RadiusX=1.5
+      - RadiusY=1.5
+  - target: ContentPresenter#ContentPresenter@CommonStates
+    styles:
+      - CornerRadius=$ItemRadius
+      - Background@ActivePointerOver:=$Hover
+      - Background@InactivePointerOver:=$Hover
+      - Background@ActivePressed:=$Pressed
+      - Background@InactivePressed:=$Pressed
+      - BackgroundTransition:=$Fade
+  - target: SystemTray.ChevronIconView
+    styles:
+      - CornerRadius=$ItemRadius
+  - target: SystemTray.NotifyIconView#NotifyItemIcon
+    styles:
+      - CornerRadius=$ItemRadius
+  - target: SystemTray.OmniButton
+    styles:
+      - CornerRadius=$ItemRadius
+  - target: Rectangle#ShowDesktopPipe
+    styles:
+      - Visibility=1
+  - target: Rectangle#RightOverflowButtonDivider
+    styles:
+      - Visibility=1
+  - target: TextBlock#TimeInnerTextBlock
+    styles:
+      - FontSize=13
+      - FontWeight=SemiBold
+  - target: TextBlock#DateInnerTextBlock
+    styles:
+      - FontSize=11
+      - Opacity=$DateOpacity
+  - target: SearchUx.SearchUI.SearchIconButton > SearchUx.SearchUI.SearchButtonRootGrid@CommonStates > Grid > Border#BackgroundElement, SearchUx.SearchUI.SearchIconButton > SearchUx.SearchUI.SearchButtonRootGrid@CommonStates > Border#BackgroundElement
+    styles:
+      - CornerRadius=$ItemRadius
+      - BorderThickness=0
+  - target: Border#SearchPillBackgroundElement
+    styles:
+      - CornerRadius=$ItemRadius
+      - BorderThickness=0
+      - Background:=$Pressed
+  # Superficies emergentes: miniaturas, desbordamiento, tooltips, menus
+  - target: Canvas#HoverFlyoutCanvas > Grid#HoverFlyoutGrid > Border#HoverFlyoutBackground
+    styles:
+      - Shadow:=
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: Border#OverflowFlyoutBackgroundBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: Grid#OverflowRootGrid > Border
+    styles:
+      - CornerRadius=$Radius
+  - target: ToolTip > ContentPresenter#LayoutRoot
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=10
+  - target: MenuFlyoutPresenter
+    styles:
+      - CornerRadius=14
+  # Alt+Tab, vista de tareas y escritorios virtuales
+  - target: WindowsInternal.ComposableShell.Experiences.Switcher.AltTab > Windows.UI.Xaml.Controls.Grid#ModalRootGrid > Windows.UI.Xaml.Controls.Border#BackgroundElement
+    styles:
+      - Background=Transparent
+      - BorderThickness=0
+      - CornerRadius=$Radius
+  - target: WindowsInternal.ComposableShell.Experiences.Switcher.AltTab > Windows.UI.Xaml.Controls.Grid#ModalRootGrid > Windows.UI.Xaml.Controls.Border#BackgroundElement > WindowsInternal.ComposableShell.Experiences.Switcher.SwitchItemList
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: WindowsInternal.ComposableShell.Experiences.Switcher.SwitchItemListViewItem > Grid > Border
+    styles:
+      - CornerRadius=$ItemRadius
+  - target: Border#VirtualDesktopBarBackground
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: WindowsInternal.ComposableShell.Experiences.Switcher.VirtualDesktopBarElement > Grid#GridElement > Border#VirtualDesktopSwitcherBackground
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: Border#BackgroundDimmingLayer
+    styles:
+      - CornerRadius=$Radius
+  # Snap layouts
+  - target: Border#SnapBarBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius
+  - target: Border#SnapPickerBorder
+    styles:
+      - Background:=$Glass
+      - BorderBrush:=$Stroke
+      - BorderThickness=$Border
+      - CornerRadius=$Radius

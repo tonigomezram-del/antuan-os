@@ -1,0 +1,18 @@
+#!/bin/sh
+# Informacion del sistema al estilo Antuan
+a='\033[38;2;157;180;255m'; d='\033[38;2;139;145;163m'; w='\033[38;2;233;235;241m'; r='\033[0m'
+. /etc/os-release
+cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ //')
+ram=$(free -h --si | awk '/Mem:/ {print $3 " de " $2}')
+disco=$(df -h / | awk 'NR==2 {print $3 " de " $2}')
+gpu=$(lspci 2>/dev/null | grep -Ei 'vga|3d' | head -n1 | cut -d: -f3 | sed 's/^ //')
+up=$(uptime -p | sed 's/up //;s/hours\?/h/;s/minutes\?/min/;s/days\?/d/')
+printf "\n"
+printf "   ${w}   ●◐   ${r}   ${a}%s${r}@${a}%s${r}\n" "$(whoami)" "$(hostname)"
+printf "   ${w}  ◐  ◑  ${r}   ${d}sistema${r}   ${w}%s${r}\n" "$PRETTY_NAME"
+printf "   ${w}   ◑●   ${r}   ${d}escritorio${r} ${w}Antuan${r}\n"
+printf "              ${d}cpu${r}       ${w}%s${r}\n" "$cpu"
+[ -n "$gpu" ] && printf "              ${d}gráficos${r}  ${w}%s${r}\n" "$gpu"
+printf "              ${d}memoria${r}   ${w}%s${r}\n" "$ram"
+printf "              ${d}disco${r}     ${w}%s${r}\n" "$disco"
+printf "              ${d}encendido${r} ${w}%s${r}\n\n" "$up"

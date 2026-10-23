@@ -1,0 +1,12 @@
+#!/bin/sh
+# Escritorio Antuan: permisos de las ordenes y del motor grafico
+set -e
+chmod 755 /usr/bin/umbra-session /usr/bin/umbra-cmd /usr/bin/umbra-archivos /usr/bin/umbra-captura
+if [ -d /opt/umbra ]; then
+  chmod 755 /opt/umbra/umbra
+  # El aislamiento de Chromium necesita este permiso especial
+  [ -f /opt/umbra/chrome-sandbox ] && chown root:root /opt/umbra/chrome-sandbox && chmod 4755 /opt/umbra/chrome-sandbox
+  ln -sf /opt/umbra/umbra /usr/bin/umbra
+fi
+# Fondo por defecto
+[ -f /usr/share/umbra/fondo.png ] || cp /usr/share/umbra/umbra-256.png /usr/share/umbra/fondo.png

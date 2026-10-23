@@ -1,0 +1,11 @@
+{
+  "name": "antuan-os",
+  "owner": { "name": "Toni Gomez" },
+  "plugins": [
+    {
+      "name": "antuan-os",
+      "source": "./",
+      "description": "Antuan OS: el sistema operativo y escritorio propio de Toni (sobre Debian 13), con todo el código y cómo reconstruir la ISO idéntica."
+    }
+  ]
+}

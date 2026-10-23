@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; img-src 'self' file: data:; connect-src https://api.open-meteo.com https://geocoding-api.open-meteo.com">
+<title>Escritorio Antuan</title>
+<style>
+:root {
+  --text: #e9ebf1; --muted: #8b91a3; --faint: #5a6072;
+  --accent: #9db4ff; --accent-rgb: 157, 180, 255;
+  --spring: cubic-bezier(.34, 1.45, .55, 1); --ease: cubic-bezier(.22, 1, .36, 1);
+  --pad-l: 44px; --pad-r: 44px; --pad-t: 40px; --pad-b: 110px;
+  color-scheme: dark;
+}
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #07080b; }
+body { color: var(--text); font: 13px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; cursor: default; }
+svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+#bg { position: fixed; inset: 0; background-size: cover; background-position: center; transition: opacity 1s var(--ease); }
+#bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,.45)), linear-gradient(90deg, rgba(0,0,0,.25), transparent 40%); }
+
+/* Reloj */
+#clock { position: fixed; top: calc(var(--pad-t) + 4px); right: calc(var(--pad-r) + 12px); text-align: right; pointer-events: none; animation: fadeUp .9s var(--ease) both; }
+#clock .t { font: 200 84px/0.95 "Segoe UI Variable Display", "Segoe UI", sans-serif; letter-spacing: -.035em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 30px rgba(0,0,0,.35); }
+#clock .d { margin-top: 10px; font-size: 16px; color: rgba(233,235,241,.78); text-transform: capitalize; }
+#clock .g { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+/* Grupos */
+#groups { position: fixed; top: var(--pad-t); left: var(--pad-l); bottom: var(--pad-b); right: var(--groups-right, 420px); display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 22px 40px; }
+body.cards #groups { gap: 16px 16px; }
+.group { animation: fadeUp .6s var(--ease) both; animation-delay: calc(var(--g) * 70ms); }
+/* Estilo tarjetas: cada grupo en su cristal, como los widgets */
+body.cards .group { position: relative; padding: 14px 12px 8px; border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 60%), rgba(14,16,22,.34);
+  backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 22px 50px -22px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08); }
+body.cards .group::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.04) 45%, rgba(255,255,255,.09));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
+body.cards .group h3 { margin: 0 0 6px 8px; }
+body.cards .group h3 i { width: 8px; height: 8px; border-radius: 50%; background: var(--gc, var(--accent)); box-shadow: 0 0 10px var(--gc, var(--accent)); }
+body.cards .cell .tile { backdrop-filter: none; background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.03) 55%), rgba(255,255,255,.04); }
+/* Tamano de iconos */
+body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92px; } body.sz-l { --tile: 70px; --cellw: 106px; }
+.group h3 { margin: 0 0 8px 6px; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(233,235,241,.55); display: flex; gap: 8px; align-items: center; }
+.group h3 b { font-weight: 500; color: var(--faint); letter-spacing: 0; }
+.cells { display: grid; grid-template-columns: repeat(var(--cols), var(--cellw, 92px)); gap: 4px; }
+.cell { display: grid; justify-items: center; align-content: start; gap: 7px; padding: 10px 4px 8px; border-radius: 16px; border: 0; background: none; color: inherit; font: inherit; transition: background .18s; outline: none; }
+.cell:hover { background: rgba(255,255,255,.06); }
+.cell.sel { background: rgba(var(--accent-rgb), .16); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), .45); }
+.cell .tile {
+  position: relative; width: var(--tile, 58px); height: var(--tile, 58px); border-radius: 30%; display: grid; place-items: center;
+  background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.03) 55%), rgba(16, 18, 24, .42);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 10px 24px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.12);
+  transition: transform .35s var(--spring), box-shadow .25s;
+}
+.cell .tile::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; pointer-events: none; }
+.cell:hover .tile { transform: translateY(-3px) scale(1.04); box-shadow: 0 16px 30px -12px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.16); }
+.cell:active .tile { transform: scale(.92); transition-duration: .1s; }
+.cell.opening .tile { animation: launch .5s var(--ease); }
+@keyframes launch { 40% { transform: scale(1.14); } 100% { transform: none; } }
+.cell .tile img { width: 64%; height: 64%; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.cell .tile .letter { font-weight: 600; font-size: 20px; }
+.cell span.n { max-width: calc(var(--cellw, 92px) - 4px); font-size: 12px; text-align: center; line-height: 1.3; text-shadow: 0 1px 3px rgba(0,0,0,.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: normal; word-break: normal; }
+.cell span.n.long { display: block; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Menu contextual */
+.menu { position: fixed; z-index: 50; min-width: 220px; padding: 6px; border-radius: 14px; display: grid; gap: 1px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 60%), rgba(11,13,18,.82); backdrop-filter: blur(26px) saturate(160%);
+  box-shadow: 0 24px 60px -18px rgba(0,0,0,.75), inset 0 0 0 1px rgba(255,255,255,.09);
+  opacity: 0; visibility: hidden; scale: .96; transform-origin: top left; transition: opacity .15s, scale .15s var(--ease), visibility .15s; }
+.menu.open { opacity: 1; visibility: visible; scale: 1; }
+.menu button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+.menu button:hover { background: rgba(255,255,255,.08); }
+.menu button.danger:hover { background: rgba(229,72,77,.85); }
+.menu hr { border: 0; height: 1px; background: rgba(255,255,255,.07); margin: 4px 6px; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } }
+
+/* Widgets */
+.wd { position: fixed; width: 300px; padding: 16px 18px; border-radius: 22px; z-index: 5;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 60%), rgba(14,16,22,.38);
+  backdrop-filter: blur(26px) saturate(160%); box-shadow: 0 20px 50px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
+  animation: fadeUp .7s var(--ease) both; transition: box-shadow .2s, transform .25s var(--spring); }
+.wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
+.wd.drag { transform: scale(1.03); box-shadow: 0 30px 70px -20px rgba(0,0,0,.85); z-index: 9; transition: none; }
+.wd h4 { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: rgba(233,235,241,.5); display: flex; gap: 8px; align-items: center; cursor: grab; }
+.wd h4 .x { margin-left: auto; opacity: 0; transition: opacity .15s; border: 0; background: none; color: inherit; padding: 0; }
+.wd:hover h4 .x { opacity: .7; }
+.wx { display: flex; align-items: center; gap: 16px; }
+.wx .big { font: 200 52px/1 "Segoe UI Variable Display", sans-serif; letter-spacing: -.03em; }
+.wx .ic { font-size: 40px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+.wx small { display: block; color: var(--muted); font-size: 12.5px; }
+.days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 14px; text-align: center; font-size: 12px; }
+.days div { padding: 6px 0; border-radius: 10px; background: rgba(255,255,255,.04); }
+.days b { display: block; font-size: 15px; margin: 2px 0; font-weight: 400; }
+.days span { color: var(--muted); font-size: 11px; }
+.city { display: flex; gap: 8px; } .city input { flex: 1; background: rgba(255,255,255,.07); border: 0; border-radius: 10px; padding: 8px 10px; color: inherit; font: inherit; outline: none; }
+.btnw { border: 0; border-radius: 10px; padding: 8px 12px; background: var(--accent); color: #0b0d14; font: 600 12.5px inherit; }
+.mus { display: flex; align-items: center; gap: 12px; }
+.mus .cv { width: 54px; height: 54px; border-radius: 13px; background: linear-gradient(140deg, #7a5cff, #1fb4a6) center/cover; flex: none; box-shadow: 0 8px 20px -6px rgba(0,0,0,.6); }
+.mus .t { flex: 1; min-width: 0; } .mus b, .mus span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mus span { color: var(--muted); font-size: 12.5px; }
+.mctl { display: flex; gap: 6px; margin-top: 12px; justify-content: center; }
+.mctl button { width: 38px; height: 34px; border: 0; border-radius: 11px; background: rgba(255,255,255,.07); color: inherit; display: grid; place-items: center; }
+.mctl button:hover { background: rgba(255,255,255,.13); }
+.meter { display: grid; grid-template-columns: 54px 1fr 70px; align-items: center; gap: 10px; font-size: 12.5px; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.meter .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
+.meter .bar i { display: block; height: 100%; width: var(--p, 0%); background: var(--accent); border-radius: inherit; transition: width .8s var(--ease); }
+.meter span:last-child { text-align: right; color: var(--muted); }
+.notes { width: 100%; min-height: 110px; resize: vertical; background: none; border: 0; outline: none; color: inherit; font-family: inherit; font-size: 13.5px; line-height: 1.55; padding: 0; }
+.notes::placeholder { color: var(--faint); }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="clock"><div class="t" id="t">--:--</div><div class="d" id="d"></div><div class="g" id="g"></div></div>
+<div id="groups"></div>
+<div id="menu" class="menu" role="menu"></div>
+<script src="icons.js"></script>
+<script>
+(async () => {
+const U = window.umbra, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+// Antuan OS: la papelera es trash:/// (no se mueve ni se muestra en carpeta)
+const LINUX = U.plataforma === 'linux', especial = (p) => p.startsWith('shell:') || p === 'trash:///';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const ORDER = ['Apps', 'Juegos', 'Carpetas', 'Archivos', 'Sistema'];
+let items = [], sel = null;
+
+function applyConfig(c) {
+  const root = document.documentElement;
+  root.style.setProperty('--accent', c.accent);
+  const n = parseInt(c.accent.slice(1), 16);
+  root.style.setProperty('--accent-rgb', [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', '));
+  root.classList.toggle('reduce-motion', !!c.reduceMotion);
+  document.body.classList.toggle('cards', c.deskStyle !== 'libre');
+  document.body.classList.remove('sz-s', 'sz-m', 'sz-l');
+  document.body.classList.add('sz-' + (c.deskIcons || 'm'));
+  if (typeof layoutWidgets === 'function') requestAnimationFrame(() => layoutWidgets());
+  // Deja libre el borde donde esta el dock
+  const dock = c.dockSize + 14 + 30;
+  root.style.setProperty('--pad-l', (c.edge === 'left' ? dock + 20 : 44) + 'px');
+  root.style.setProperty('--pad-r', (c.edge === 'right' ? dock + 20 : 44) + 'px');
+  root.style.setProperty('--pad-t', (c.edge === 'top' ? dock + 16 : 40) + 'px');
+  root.style.setProperty('--pad-b', (c.edge === 'bottom' ? dock + 24 : 40) + 'px');
+}
+
+const info = await U.desktopInfo();
+applyConfig(info.config);
+if (info.wallpaper) $('#bg').style.backgroundImage = `url("${info.wallpaper}")`;
+U.on('config', applyConfig);
+U.on('wallpaper', (url) => { $('#bg').style.backgroundImage = `url("${url}")`; });
+
+function tile(it) {
+  if (it.icon) return `<span class="tile"><img src="${it.icon}" alt="" draggable="false"></span>`;
+  return `<span class="tile"><span class="letter">${esc(it.name[0] || '?').toUpperCase()}</span></span>`;
+}
+function render() {
+  const groups = ORDER.map((g) => [g, items.filter((i) => i.group === g)]).filter(([, l]) => l.length);
+  $('#groups').innerHTML = groups.map(([g, list], gi) => {
+    const cols = list.length > 6 ? 3 : list.length > 2 ? 2 : Math.max(1, list.length);
+    const gc = { Apps: 'var(--accent)', Juegos: '#7ee0b5', Carpetas: '#ffc978', Archivos: '#c5a3ff', Sistema: '#8b91a3' }[g];
+    return `<section class="group" style="--g:${gi};--gc:${gc}"><h3><i></i>${g}<b>${list.length}</b></h3><div class="cells" style="--cols:${Math.min(cols, 3)}">${
+      list.map((it) => `<button class="cell" data-id="${esc(it.id)}" title="${esc(it.name)}">${tile(it)}<span class="n ${it.name.split(/\s+/).some((w) => w.length > 12) ? 'long' : ''}">${esc(it.name)}</span></button>`).join('')
+    }</div></section>`;
+  }).join('');
+}
+async function load() { items = await U.desktopItems(); render(); }
+await load();
+U.on('desktop-changed', load);
+
+const byId = (id) => items.find((i) => i.id === id);
+function select(id) { sel = id; $$('.cell').forEach((c) => c.classList.toggle('sel', c.dataset.id === id)); }
+function open(id) {
+  const it = byId(id); if (!it) return;
+  const c = $(`.cell[data-id="${CSS.escape(id)}"]`);
+  if (c) { c.classList.remove('opening'); void c.offsetWidth; c.classList.add('opening'); }
+  U.desktopOpen(it.path);
+}
+
+document.addEventListener('mousedown', (e) => {
+  if (!e.target.closest('.menu')) closeMenu();
+  const c = e.target.closest('.cell');
+  select(c ? c.dataset.id : null);
+});
+document.addEventListener('dblclick', (e) => { const c = e.target.closest('.cell'); if (c) open(c.dataset.id); });
+document.addEventListener('keydown', (e) => {
+  const cells = $$('.cell'); if (!cells.length) return;
+  let i = cells.findIndex((c) => c.dataset.id === sel);
+  if (e.key === 'Enter' && sel) open(sel);
+  if (e.key === 'Delete' && sel) trash(sel);
+  const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+  if (step) { i = Math.max(0, Math.min(cells.length - 1, (i < 0 ? 0 : i + step))); select(cells[i].dataset.id); cells[i].focus(); }
+  if (e.key === 'Escape') { select(null); closeMenu(); }
+});
+
+/* Menus */
+const menu = $('#menu');
+function showMenu(x, y, html, onPick) {
+  menu.innerHTML = html;
+  menu.classList.add('open');
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = Math.min(x, innerWidth - w - 8) + 'px';
+  menu.style.top = Math.min(y, innerHeight - h - 8) + 'px';
+  menu.onclick = (e) => { const b = e.target.closest('button'); if (b) { closeMenu(); onPick(b.dataset.a); } };
+}
+function closeMenu() { menu.classList.remove('open'); }
+async function trash(id) {
+  const it = byId(id); if (!it || especial(it.path)) return;
+  if (await U.desktopTrash(it.path)) load();
+}
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  const c = e.target.closest('.cell');
+  if (c) {
+    select(c.dataset.id);
+    const it = byId(c.dataset.id), special = especial(it.path);
+    showMenu(e.clientX, e.clientY,
+      `<button data-a="open">${icon('arrow')}Abrir</button>` +
+      (special ? '' : `<button data-a="reveal">${icon('folder')}Abrir ubicación</button><hr><button class="danger" data-a="trash">${icon('x')}Mover a la papelera</button>`),
+      (a) => { if (a === 'open') open(it.id); if (a === 'reveal') U.desktopReveal(it.path); if (a === 'trash') trash(it.id); });
+  } else {
+    select(null);
+    showMenu(e.clientX, e.clientY,
+      `<button data-a="look">${icon('palette')}Personalizar Antuan</button>
+       <button data-a="launcher">${icon('search')}Buscar apps</button>
+       <button data-a="folder">${icon('plus')}Nueva carpeta</button><hr>
+       <button data-a="wall">${icon('image')}Fondo de pantalla</button>
+       <button data-a="display">${icon('sun')}Pantalla</button>
+       <button data-a="umbra">${icon('dock')}Ajustes de Antuan</button>
+       <button data-a="widgets">${icon('grid')}Mostrar todos los widgets</button>
+       <button data-a="ordenar">${icon('restart')}Recolocar widgets</button><hr>
+       <button data-a="refresh">${icon('restart')}Actualizar</button>`,
+      async (a) => {
+        if (a === 'launcher') U.launcher();
+        if (a === 'look') U.cmd('centro', 'look');
+        if (a === 'folder') { await U.desktopNewFolder(); load(); }
+        if (a === 'wall') { if (LINUX) U.cmd('centro', 'look'); else U.openUri('ms-settings:personalization-background'); }
+        if (a === 'display') U.openUri('ms-settings:display');
+        if (a === 'umbra') U.umbraSettings();
+        if (a === 'widgets') { const w = {}; for (const id of WIDGETS) w[id] = Object.assign({}, wcfg()[id], { on: true }); cfg.widgets = w; U.config({ widgets: w }); mountWidgets(); }
+        if (a === 'ordenar') { const w = {}; for (const id of WIDGETS) w[id] = { on: wcfg()[id].on }; cfg.widgets = w; U.config({ widgets: w }); mountWidgets(); }
+        if (a === 'refresh') load();
+      });
+  }
+});
+
+/* ---------------- Widgets ---------------- */
+const WIDGETS = ['tiempo', 'musica', 'sistema', 'notas'];
+const WNAMES = { tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
+let cfg = info.config;
+U.on('config', (c) => { cfg = c; });
+const wcfg = () => Object.assign({ tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
+function saveW(id, patch) { const w = wcfg(); w[id] = Object.assign({}, w[id], patch); cfg.widgets = w; U.config({ widgets: w }); }
+
+// Colocacion automatica: columna bajo el reloj y, si no cabe, otra columna a su izquierda.
+function layoutWidgets() {
+  const css = getComputedStyle(document.documentElement);
+  const padR = parseInt(css.getPropertyValue('--pad-r')), padT = parseInt(css.getPropertyValue('--pad-t')), padB = parseInt(css.getPropertyValue('--pad-b'));
+  const clockBottom = $('#clock').getBoundingClientRect().bottom + 22, W = 300, gap = 14;
+  let col = 0, y = clockBottom;
+  for (const el of $$('.wd')) {
+    if (el.dataset.custom) continue;
+    const h = el.offsetHeight;
+    if (y + h > innerHeight - padB && y > padT + 1) { col++; y = padT; }
+    el.style.left = (innerWidth - padR - 12 - W - col * (W + gap)) + 'px';
+    el.style.top = y + 'px';
+    y += h + gap;
+  }
+  document.documentElement.style.setProperty('--groups-right', (padR + 12 + (col + 1) * (W + gap) + 24) + 'px');
+}
+const ro = new ResizeObserver(() => layoutWidgets());
+addEventListener('resize', layoutWidgets);
+function mountWidgets() {
+  $$('.wd').forEach((w) => w.remove());
+  WIDGETS.forEach((id, i) => {
+    const c = wcfg()[id]; if (!c.on) return;
+    const el = document.createElement('section');
+    el.className = 'wd'; el.dataset.w = id; el.style.animationDelay = (300 + i * 90) + 'ms';
+    el.innerHTML = `<h4>${WNAMES[id]}<button class="x" title="Ocultar">${icon('x')}</button></h4><div class="body"></div>`;
+    document.body.appendChild(el);
+    if (c.x != null) { el.style.left = c.x + 'px'; el.style.top = c.y + 'px'; el.dataset.custom = '1'; }
+    RENDER[id]($('.body', el));
+    ro.observe(el);
+  });
+  layoutWidgets();
+}
+// Arrastrar un widget por su titulo; se guarda donde lo sueltes.
+document.addEventListener('pointerdown', (e) => {
+  const h = e.target.closest('.wd h4'); if (!h || e.target.closest('.x')) return;
+  const el = h.parentElement, r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
+  el.classList.add('drag'); el.style.right = 'auto';
+  const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px'; };
+  const up = () => { el.classList.remove('drag'); el.dataset.custom = '1'; removeEventListener('pointermove', mv); removeEventListener('pointerup', up); saveW(el.dataset.w, { x: parseInt(el.style.left), y: parseInt(el.style.top) }); layoutWidgets(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up);
+});
+document.addEventListener('click', (e) => { const x = e.target.closest('.wd .x'); if (x) { const id = x.closest('.wd').dataset.w; saveW(id, { on: false }); x.closest('.wd').remove(); } });
+
+const WMO = (c) => c === 0 ? ['☀️', 'Despejado'] : c <= 2 ? ['🌤️', 'Poco nuboso'] : c === 3 ? ['☁️', 'Nublado'] : c <= 48 ? ['🌫️', 'Niebla'] : c <= 57 ? ['🌦️', 'Llovizna'] : c <= 67 ? ['🌧️', 'Lluvia'] : c <= 77 ? ['❄️', 'Nieve'] : c <= 82 ? ['🌧️', 'Chubascos'] : ['⛈️', 'Tormenta'];
+const RENDER = {
+  async tiempo(b) {
+    const city = cfg.weatherCity;
+    if (!city) {
+      b.innerHTML = `<div class="city"><input placeholder="Escribe tu ciudad" id="cityIn"><button class="btnw" id="cityOk">Ver</button></div><small style="display:block;margin-top:8px;color:var(--faint)">Solo se usa para consultar el tiempo en open-meteo.com.</small>`;
+      const ok = async () => {
+        const q = $('#cityIn').value.trim(); if (!q) return;
+        try {
+          const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=es&name=${encodeURIComponent(q)}`)).json();
+          const r = g.results && g.results[0]; if (!r) { $('#cityIn').value = ''; $('#cityIn').placeholder = 'No la encuentro, prueba otra'; return; }
+          cfg.weatherCity = { name: r.name, lat: r.latitude, lon: r.longitude }; U.config({ weatherCity: cfg.weatherCity }); RENDER.tiempo(b);
+        } catch { }
+      };
+      $('#cityOk').onclick = ok; $('#cityIn').onkeydown = (e) => { if (e.key === 'Enter') ok(); };
+      return;
+    }
+    try {
+      const d = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`)).json();
+      const [ic, txt] = WMO(d.current.weather_code);
+      b.innerHTML = `<div class="wx"><span class="ic">${ic}</span><div><div class="big">${Math.round(d.current.temperature_2m)}°</div></div><div><b>${esc(city.name)}</b><small>${txt} · sensación ${Math.round(d.current.apparent_temperature)}°</small></div></div>
+        <div class="days">${d.daily.time.map((t, i) => `<div><span>${new Date(t).toLocaleDateString('es-ES', { weekday: 'short' })}</span><b>${WMO(d.daily.weather_code[i])[0]}</b><span>${Math.round(d.daily.temperature_2m_max[i])}° ${Math.round(d.daily.temperature_2m_min[i])}°</span></div>`).join('')}</div>`;
+    } catch { b.innerHTML = '<small style="color:var(--muted)">Sin conexión para el tiempo.</small>'; }
+  },
+  async musica(b) {
+    b.innerHTML = `<div class="mus"><div class="cv"></div><div class="t"><b>Nada sonando</b><span>Pon música y aparecerá aquí</span></div></div>
+      <div class="mctl"><button data-m="prev">${icon('prev')}</button><button data-m="toggle">${icon('play')}</button><button data-m="next">${icon('next')}</button></div>`;
+    b.onclick = async (e) => { const m = e.target.closest('[data-m]'); if (m) { await U.ask('sys', 'media-cmd ' + m.dataset.m); setTimeout(tick, 400); } };
+    let last = null;
+    const tick = async () => {
+      if (!document.body.contains(b)) return;
+      const m = await U.ask('sys', 'media?');
+      const has = m && m.ok && !m.none;
+      $('b', b).textContent = has ? (m.title || 'Sin título') : 'Nada sonando';
+      $('.t span', b).textContent = has ? (m.artist || m.app || '') : 'Pon música y aparecerá aquí';
+      $('[data-m="toggle"]', b).innerHTML = icon(has && m.playing ? 'pause' : 'play');
+      if (has && m.cover !== last) { last = m.cover; const img = m.cover ? await U.ask('mediaCover', m.cover) : null; $('.cv', b).style.backgroundImage = img ? `url("${img}")` : ''; }
+    };
+    tick(); setInterval(tick, 8000);
+  },
+  sistema(b) {
+    b.innerHTML = `<div class="meter"><span>CPU</span><div class="bar"><i id="mCpu"></i></div><span id="tCpu">–</span></div>
+      <div class="meter"><span>RAM</span><div class="bar"><i id="mRam"></i></div><span id="tRam">–</span></div>
+      <div class="meter"><span>Activo</span><div></div><span id="tUp">–</span></div>`;
+    const tick = async () => {
+      if (!document.body.contains(b)) return;
+      const s = await U.ask('sysLite'); if (!s) return;
+      if (s.cpu != null) { $('#mCpu').style.setProperty('--p', s.cpu + '%'); $('#tCpu').textContent = s.cpu + ' %'; }
+      $('#mRam').style.setProperty('--p', s.ram + '%'); $('#tRam').textContent = s.ramGB + ' GB';
+      const d = Math.floor(s.up / 86400), h = Math.floor(s.up % 86400 / 3600), m = Math.floor(s.up % 3600 / 60);
+      $('#tUp').textContent = d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min`;
+    };
+    tick(); setInterval(tick, 3000);
+  },
+  async notas(b) {
+    b.innerHTML = `<textarea class="notes" placeholder="Apunta lo que sea. Se guarda solo."></textarea>`;
+    const ta = $('textarea', b); ta.value = await U.ask('notes') || '';
+    let t; ta.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => U.ask('saveNotes', ta.value), 500); });
+  }
+};
+mountWidgets();
+
+/* Reloj */
+function clock() {
+  const d = new Date(), h = d.getHours();
+  $('#t').textContent = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  $('#d').textContent = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#g').textContent = (h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches') + ', ' + info.user;
+}
+clock(); setInterval(clock, 5000);
+})();
+</script>
+</body>
+</html>

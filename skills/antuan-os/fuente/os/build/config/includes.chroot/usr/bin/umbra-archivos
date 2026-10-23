@@ -1,0 +1,3 @@
+#!/bin/sh
+# Abre Archivos Antuan (en una carpeta concreta si se indica)
+exec /opt/umbra/umbra --archivos="${1:-$HOME}"

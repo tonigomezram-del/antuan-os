@@ -1,0 +1,14 @@
+# Antuan Cristal: cristal liquido oscuro (variante principal)
+styleConstants:
+  - Glass=<WindhawkBlur BlurAmount="26" TintColor="#0B0D12" TintOpacity="0.58" />
+  - Stroke=<LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#42FFFFFF" Offset="0" /><GradientStop Color="#0DFFFFFF" Offset="0.42" /><GradientStop Color="#1CFFFFFF" Offset="1" /></LinearGradientBrush>
+  - Border=1
+  - Radius=18
+  - ItemRadius=12
+  - Gap=5
+  - Hover=<SolidColorBrush Color="#14FFFFFF" />
+  - Pressed=<SolidColorBrush Color="#0AFFFFFF" />
+  - Active=<SolidColorBrush Color="#1AFFFFFF" />
+  - Accent=<SolidColorBrush Color="#9DB4FF" />
+  - Fade=<BrushTransition Duration="0:0:0.16" />
+  - DateOpacity=0.6

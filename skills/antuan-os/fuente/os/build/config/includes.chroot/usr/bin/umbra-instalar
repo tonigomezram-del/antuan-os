@@ -1,0 +1,20 @@
+#!/bin/sh
+# Abre el Instalador Antuan (Calamares) con permisos de administrador.
+# En la sesion de prueba una regla polkit permite al usuario "umbra" abrirlo
+# sin contrasena; si pkexec no pudiera, se usa sudo (sin contrasena en live).
+
+# Si ya esta abierto, no abrir otro
+if command -v pgrep >/dev/null 2>&1 && pgrep -x calamares >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Variables solo pensadas para el dialogo de bienvenida
+unset XDG_CONFIG_HOME ADW_DEBUG_COLOR_SCHEME
+
+pkexec /usr/bin/calamares "$@"
+rc=$?
+# 126: no autorizado, 127: no se pudo autenticar (p. ej. sin agente de polkit)
+if [ "$rc" -eq 126 ] || [ "$rc" -eq 127 ]; then
+    exec sudo -n -E /usr/bin/calamares "$@"
+fi
+exit "$rc"

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; img-src 'self' file: data: https:">
+<title>Tienda Antuan</title>
+<link rel="stylesheet" href="tienda.css">
+</head>
+<body>
+<aside id="side">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M14.2 4.6a7.6 7.6 0 1 0 0 14.8a9 9 0 0 1 0-14.8z" fill="currentColor" stroke="none"/></svg>
+    <span>Tienda Antuan</span>
+  </div>
+  <nav id="nav"></nav>
+  <button id="mini" class="mini" hidden>
+    <span class="ring"><svg viewBox="0 0 36 36"><circle class="bg" cx="18" cy="18" r="15"/><circle class="fg" cx="18" cy="18" r="15"/></svg></span>
+    <span class="mt"><b id="miniT">Instalando…</b><small id="miniD"></small></span>
+  </button>
+</aside>
+<main id="main">
+  <header id="head">
+    <div class="ht"><h1 id="title">Descubrir</h1><p id="sub"></p></div>
+    <label class="search">
+      <span id="sIc"></span>
+      <input id="q" type="search" placeholder="Buscar apps…" autocomplete="off" spellcheck="false">
+      <kbd>Ctrl K</kbd>
+    </label>
+  </header>
+  <div id="pane"></div>
+</main>
+<div id="pack" aria-hidden="true">
+  <div class="stack" id="packIcons"></div>
+  <div class="pt"><b id="packT"></b><small id="packD"></small></div>
+  <button class="btn ghost" id="packClear">Vaciar</button>
+  <button class="btn primary big" id="packGo"></button>
+</div>
+<div id="toast"></div>
+<script src="icons.js"></script>
+<script src="tienda.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "edge": "bottom",
+  "dockSize": 46,
+  "magnify": true,
+  "accent": "#ff9466",
+  "glass": 66,
+  "contrast": false,
+  "reduceMotion": false,
+  "bigText": false,
+  "focusRings": false,
+  "sounds": true,
+  "desktop": true,
+  "pinned": ["umbra-archivos", "firefox-esr", "umbra:terminal", "umbra:tienda"],
+  "weatherCity": { "name": "Olot", "lat": 42.18096, "lon": 2.49012 },
+  "theme": "Brasa",
+  "tiendaFijada": true,
+  "wallpaperPath": "/usr/share/umbra/fondo-antuan.png"
+}

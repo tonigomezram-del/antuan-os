@@ -1,0 +1,32 @@
+#!/bin/sh
+# Sesion Antuan: compositor con cristal real, gestor de ventanas con tema Antuan y el escritorio Antuan.
+export XDG_CURRENT_DESKTOP=Umbra
+export XDG_SESSION_DESKTOP=umbra
+export GTK_THEME=Adwaita:dark
+export QT_QPA_PLATFORMTHEME=gtk3
+
+xdg-user-dirs-update
+xsetroot -cursor_name left_ptr
+setxkbmap es 2>/dev/null || true
+
+# Cristal (desenfoque real detras de las ventanas transparentes) y esquinas redondeadas
+# Con aceleracion grafica real: GLX con desenfoque. Sin ella (maquinas virtuales, drivers basicos)
+# GLX pinta la pantalla en negro, asi que se usa XRender sin desenfoque.
+if glxinfo -B 2>/dev/null | grep -qiE 'renderer.*(llvmpipe|softpipe|swrast)' || ! glxinfo -B >/dev/null 2>&1; then
+  picom --config /etc/umbra/picom.conf --backend xrender --blur-method none -b
+else
+  picom --config /etc/umbra/picom.conf -b
+fi
+
+# Ventanas con barra de titulo Antuan
+openbox --config-file /etc/umbra/openbox.xml &
+
+# Escritorio Antuan (dock, inicio, Spotlight, Mission Control, Centro, widgets).
+# Si se cae, vuelve en un segundo; si sale bien (cerrar sesion), termina la sesion.
+primera=--login
+while true; do
+  /opt/umbra/umbra $primera
+  [ $? -eq 0 ] && break
+  primera=
+  sleep 1
+done

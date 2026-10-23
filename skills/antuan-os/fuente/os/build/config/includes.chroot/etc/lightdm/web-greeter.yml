@@ -1,0 +1,21 @@
+# Pantalla de inicio de sesion Antuan
+branding:
+  background_images_dir: /usr/share/umbra
+  logo_image: /usr/share/umbra/umbra-256.png
+  user_image: /usr/share/umbra/umbra-256.png
+greeter:
+  debug_mode: false
+  detect_theme_errors: false
+  screensaver_timeout: 300
+  secure_mode: true
+  theme: umbra
+  icon_theme: Adwaita
+  time_language: es-ES
+layouts:
+  - es
+features:
+  battery: true
+  backlight:
+    enabled: true
+    value: 10
+    steps: 0

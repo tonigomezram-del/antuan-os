@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; img-src 'self' file: data:">
+<title>Captura Antuan</title>
+<style>
+:root { --accent: #9db4ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; cursor: crosshair; user-select: none;
+  font: 13px "Segoe UI Variable Text", "Segoe UI", sans-serif; color: #e9ebf1; }
+#shot { position: fixed; inset: 0; width: 100%; height: 100%; }
+#dim { position: fixed; inset: 0; background: rgba(5,6,9,.35); transition: background .2s; }
+body.ocr #dim { background: rgba(5,6,9,.5); }
+#sel { position: fixed; display: none; border-radius: 6px; box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 9999px rgba(5,6,9,.45); }
+#loupe { position: fixed; width: 132px; height: 132px; border-radius: 50%; overflow: hidden; pointer-events: none; display: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 14px 40px rgba(0,0,0,.6); }
+#loupe canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+#loupe::after { content: ""; position: absolute; left: 50%; top: 50%; width: 11px; height: 11px; translate: -50% -50%; box-shadow: 0 0 0 1.5px #fff, 0 0 0 3px rgba(0,0,0,.5); }
+#chip { position: fixed; display: none; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 10px; pointer-events: none;
+  background: rgba(11,13,18,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); font-variant-numeric: tabular-nums; }
+#chip i { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+#help { position: fixed; top: 22px; left: 50%; translate: -50% 0; padding: 8px 16px; border-radius: 99px; background: rgba(11,13,18,.88);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); color: #c9cdd8; animation: in .4s cubic-bezier(.34,1.45,.55,1); }
+#busy { position: fixed; display: none; padding: 8px 14px; border-radius: 99px; background: rgba(11,13,18,.9); }
+@keyframes in { from { opacity: 0; translate: -50% -10px; } }
+</style>
+</head>
+<body>
+<img id="shot" alt="">
+<div id="dim"></div>
+<div id="sel"></div>
+<div id="loupe"><canvas width="15" height="15"></canvas></div>
+<div id="chip"><i></i><span></span></div>
+<div id="help"></div>
+<div id="busy">Leyendo texto…</div>
+<script>
+(() => {
+const q = new URLSearchParams(location.search), modo = q.get('modo'), U = window.umbra;
+const shot = document.getElementById('shot'), help = document.getElementById('help');
+document.body.classList.add(modo);
+help.textContent = modo === 'color' ? 'Haz clic para copiar el color · Esc para salir' : 'Arrastra sobre el texto que quieres copiar · Esc para salir';
+shot.src = q.get('img');
+const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+shot.onload = () => { cv.width = shot.naturalWidth; cv.height = shot.naturalHeight; cx.drawImage(shot, 0, 0); };
+const sx = () => shot.naturalWidth / innerWidth, sy = () => shot.naturalHeight / innerHeight;
+const hex = (r, g, b) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+addEventListener('keydown', (e) => { if (e.key === 'Escape') U.cmd('captureDone', modo, null); });
+
+if (modo === 'color') {
+  const loupe = document.getElementById('loupe'), lc = loupe.querySelector('canvas').getContext('2d'), chip = document.getElementById('chip');
+  lc.imageSmoothingEnabled = false;
+  let cur = null;
+  addEventListener('mousemove', (e) => {
+    if (!cv.width) return;
+    const px = Math.round(e.clientX * sx()), py = Math.round(e.clientY * sy());
+    lc.clearRect(0, 0, 15, 15);
+    lc.drawImage(cv, px - 7, py - 7, 15, 15, 0, 0, 15, 15);
+    const d = cx.getImageData(px, py, 1, 1).data;
+    cur = hex(d[0], d[1], d[2]);
+    const lx = e.clientX + 22, ly = e.clientY + 22;
+    Object.assign(loupe.style, { display: 'block', left: Math.min(lx, innerWidth - 140) + 'px', top: Math.min(ly, innerHeight - 180) + 'px' });
+    Object.assign(chip.style, { display: 'flex', left: Math.min(lx + 14, innerWidth - 126) + 'px', top: Math.min(ly + 140, innerHeight - 38) + 'px' });
+    chip.querySelector('i').style.background = cur;
+    chip.querySelector('span').textContent = cur;
+  });
+  addEventListener('mousedown', () => { if (cur) U.cmd('captureDone', 'color', cur); });
+} else {
+  const sel = document.getElementById('sel'), busy = document.getElementById('busy');
+  let start = null, rect = null;
+  addEventListener('mousedown', (e) => { start = { x: e.clientX, y: e.clientY }; sel.style.display = 'block'; });
+  addEventListener('mousemove', (e) => {
+    if (!start) return;
+    rect = { x: Math.min(start.x, e.clientX), y: Math.min(start.y, e.clientY), w: Math.abs(e.clientX - start.x), h: Math.abs(e.clientY - start.y) };
+    Object.assign(sel.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' });
+  });
+  addEventListener('mouseup', async () => {
+    if (!start || !rect || rect.w < 6 || rect.h < 6) { start = null; return; }
+    start = null;
+    const c = document.createElement('canvas');
+    // Se amplia x2 para que el OCR lea mejor letras pequenas.
+    const k = 2, w = Math.round(rect.w * sx()), h = Math.round(rect.h * sy());
+    c.width = w * k; c.height = h * k;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(cv, Math.round(rect.x * sx()), Math.round(rect.y * sy()), w, h, 0, 0, w * k, h * k);
+    Object.assign(busy.style, { display: 'block', left: rect.x + 'px', top: Math.max(8, rect.y - 44) + 'px' });
+    const text = await U.ask('ocrImage', c.toDataURL('image/png'));
+    U.cmd('captureDone', 'ocr', text || null);
+  });
+}
+})();
+</script>
+</body>
+</html>

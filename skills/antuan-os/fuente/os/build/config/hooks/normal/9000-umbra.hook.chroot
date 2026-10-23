@@ -1,0 +1,74 @@
+#!/bin/sh
+# Identidad Antuan: se ejecuta dentro del sistema mientras se construye la imagen.
+set -e
+
+# Nombre del sistema en todas partes
+ln -sf /usr/lib/os-release /etc/os-release
+echo "antuan" > /etc/hostname
+: > /etc/motd
+
+# Arranque: animacion Antuan
+plymouth-set-default-theme umbra || true
+update-initramfs -u || true
+
+# Idioma y teclado por defecto
+sed -i 's/^# *es_ES.UTF-8/es_ES.UTF-8/' /etc/locale.gen && locale-gen
+echo 'LANG=es_ES.UTF-8' > /etc/default/locale
+
+# Iconos de la marca para el resto del sistema (instalador, ajustes, etc.)
+for s in 48 64 128 256; do
+  mkdir -p /usr/share/icons/hicolor/${s}x${s}/apps
+  cp /usr/share/umbra/umbra-256.png /usr/share/icons/hicolor/${s}x${s}/apps/umbra.png
+done
+gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+
+# Fuera marcas de la base: fondos, logos y entradas de menu que no son de Antuan
+rm -rf /usr/share/desktop-base/active-theme 2>/dev/null || true
+rm -f /usr/share/applications/debian-*.desktop 2>/dev/null || true
+for f in /usr/share/applications/{openbox,xterm,uxterm,display-im6.q16,vim,htop}.desktop; do
+  [ -f "$f" ] && echo "NoDisplay=true" >> "$f"
+done
+
+# Paquetes de juegos de 32 bits (Steam, Wine) y Flatpak con Flathub para la Tienda
+dpkg --add-architecture i386 || true
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+
+# ZRAM: memoria comprimida (va mucho mejor con poca RAM)
+printf 'ALGO=zstd\nPERCENT=50\n' > /etc/default/zramswap
+
+# Sesion Antuan por defecto en el gestor de inicio
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/50-umbra.conf <<'EOF'
+[Seat:*]
+user-session=umbra
+greeter-hide-users=false
+EOF
+
+# --- Instalador Antuan (Calamares) ---
+# Fuera la marca de la base en Calamares: solo queda la de Antuan
+for d in /usr/share/calamares/branding/* /etc/calamares/branding/*; do
+  [ -d "$d" ] || continue
+  [ "$(basename "$d")" = "umbra" ] || rm -rf "$d"
+done
+# Lanzadores del instalador de la base ("Install Debian" y similares)
+for f in /usr/share/applications/*.desktop /etc/xdg/autostart/*.desktop /etc/skel/Desktop/*.desktop; do
+  [ -f "$f" ] || continue
+  case "$(basename "$f")" in umbra-*) continue ;; esac
+  if grep -qi 'debian' "$f" && grep -qiE 'calamares|install-debian' "$f"; then
+    rm -f "$f"
+  elif grep -qi 'calamares' "$f"; then
+    # El calamares.desktop generico ("Install System"): oculto, ya esta "Instalar Antuan"
+    grep -q '^NoDisplay=true' "$f" || echo "NoDisplay=true" >> "$f"
+  fi
+done
+rm -f /usr/share/applications/install-debian.desktop /usr/share/applications/calamares-install-debian.desktop 2>/dev/null || true
+# Permisos de los scripts del instalador (los archivos vienen de Windows)
+chmod 755 /usr/bin/umbra-instalar /usr/bin/umbra-bienvenida /usr/lib/umbra/instalador/*.sh 2>/dev/null || true
+chmod 644 /etc/polkit-1/rules.d/49-umbra-instalador.rules 2>/dev/null || true
+# Bienvenida automatica en la sesion de prueba (servicio de usuario; solo actua con boot=live)
+systemctl --global enable umbra-instalador.service 2>/dev/null || \
+  { mkdir -p /etc/systemd/user/default.target.wants && \
+    ln -sf /etc/systemd/user/umbra-instalador.service /etc/systemd/user/default.target.wants/umbra-instalador.service; }
+
+# Sin rastro de Debian/Linux en la consola de texto
+rm -f /etc/update-motd.d/10-uname /etc/motd

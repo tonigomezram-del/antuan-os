@@ -1,0 +1,51 @@
+/* Dialogo de bienvenida de la sesion de prueba con los colores de Antuan.
+   Variables para libadwaita >= 1.6 y colores con nombre para versiones anteriores. */
+:root {
+  --accent-bg-color: #9db4ff;
+  --accent-fg-color: #0b0d12;
+  --accent-color: #9db4ff;
+  --window-bg-color: #0b0d12;
+  --window-fg-color: #e9ebf1;
+  --view-bg-color: #0b0d12;
+  --view-fg-color: #e9ebf1;
+  --dialog-bg-color: #0b0d12;
+  --dialog-fg-color: #e9ebf1;
+  --popover-bg-color: #11141b;
+  --popover-fg-color: #e9ebf1;
+  --headerbar-bg-color: #0b0d12;
+  --headerbar-fg-color: #e9ebf1;
+  --card-bg-color: rgba(255, 255, 255, 0.06);
+}
+@define-color accent_bg_color #9db4ff;
+@define-color accent_fg_color #0b0d12;
+@define-color accent_color #9db4ff;
+@define-color window_bg_color #0b0d12;
+@define-color window_fg_color #e9ebf1;
+@define-color dialog_bg_color #0b0d12;
+@define-color dialog_fg_color #e9ebf1;
+@define-color headerbar_bg_color #0b0d12;
+@define-color headerbar_fg_color #e9ebf1;
+
+window, dialog, .background, .message-dialog, .dialog-contents {
+  background-color: #0b0d12;
+  color: #e9ebf1;
+  font-family: "Inter", sans-serif;
+}
+window.dialog, .message-dialog, floating-sheet > sheet {
+  border-radius: 18px;
+}
+label { color: #e9ebf1; }
+.body, label.body { color: #8b91a3; }
+button {
+  border-radius: 10px;
+  min-height: 38px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9ebf1;
+}
+button:hover { background: rgba(255, 255, 255, 0.13); }
+button.suggested-action, button.default {
+  background: #9db4ff;
+  color: #0b0d12;
+  font-weight: 600;
+}
+button.suggested-action:hover, button.default:hover { background: #b3c4ff; }

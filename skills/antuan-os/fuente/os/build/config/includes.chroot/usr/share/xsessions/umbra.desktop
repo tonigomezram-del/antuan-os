@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Antuan
+Comment=Escritorio Antuan
+Exec=/usr/bin/umbra-session
+Type=Application
+DesktopNames=Umbra

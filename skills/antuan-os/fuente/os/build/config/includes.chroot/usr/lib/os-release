@@ -1,0 +1,12 @@
+PRETTY_NAME="Antuan 1.0"
+NAME="Antuan"
+VERSION_ID="1.0"
+VERSION="1.0 (Aurora)"
+VERSION_CODENAME=aurora
+ID=antuan
+ID_LIKE=debian
+HOME_URL="https://antuan.local/"
+SUPPORT_URL="https://antuan.local/ayuda"
+BUG_REPORT_URL="https://antuan.local/ayuda"
+LOGO=umbra
+ANSI_COLOR="38;2;157;180;255"
