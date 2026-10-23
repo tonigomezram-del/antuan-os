@@ -10,7 +10,7 @@ Sistema operativo y escritorio propio de Toni Gomez, sobre **Debian 13 "trixie"*
 ## Usarlo en otro PC con Claude Code
 
 ```
-/plugin marketplace add toni-gomez-ram/antuan-os
+/plugin marketplace add tonigomezram-del/antuan-os
 /plugin install antuan-os@antuan-os
 ```
 
