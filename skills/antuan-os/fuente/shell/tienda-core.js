@@ -9,10 +9,14 @@ const { spawn, execFile } = require('child_process');
 const path = require('path');
 const { APPS, CATEGORIAS, PACKS } = require('./tienda-catalogo');
 const paquete = require('./umbra-paquete');
+const webapps = require('./webapps');
+const fs = require('fs');
+const os = require('os');
 
-module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, enviar = () => {}, simular = process.env.UMBRA_TIENDA_SIMULAR === '1' }) {
+module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, enviar = () => {}, abrirTerminal = null, simular = process.env.UMBRA_TIENDA_SIMULAR === '1' }) {
   const WIN = process.platform === 'win32', LINUX = process.platform === 'linux';
   const porId = new Map(APPS.map((a) => [a.id, a]));
+  webapps.registrar(APPS);
   const L = (...m) => { try { log('tienda', ...m); } catch {} };
 
   /* ---------------------------------------------------------------- Utilidades de procesos */
@@ -54,14 +58,29 @@ module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, en
     sistema.simulado = !!simular;
     return sistema;
   }
+  // Instaladores oficiales (sin gestor de paquetes). hecho(): si ya esta instalado.
+  const HOME = os.homedir();
+  const SCRIPTS = {
+    'claude-code': {
+      instalar: WIN ? ['powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'irm https://claude.ai/install.ps1 | iex']]
+        : ['bash', ['-c', 'curl -fsSL https://claude.ai/install.sh | bash']],
+      bin: WIN ? path.join(HOME, '.local', 'bin', 'claude.exe') : path.join(HOME, '.local/bin/claude'),
+      borrar: [path.join(HOME, '.local', 'bin', WIN ? 'claude.exe' : 'claude'), path.join(HOME, '.local', 'share', 'claude')],
+    }
+  };
+  const scriptHecho = (id) => !!SCRIPTS[id] && fs.existsSync(SCRIPTS[id].bin);
+
   function fuenteDe(a) {
     const f = a.fuentes || {};
     if (!sistema) return null;
-    if (sistema.so === 'windows') return f.winget && (sistema.winget || simular) ? { tipo: 'winget', id: f.winget } : null;
+    if (sistema.so === 'windows' && f.winget && (sistema.winget || simular)) return { tipo: 'winget', id: f.winget };
     if (sistema.so === 'linux') {
       if (f.flatpak && (sistema.flatpak || simular)) return { tipo: 'flatpak', id: f.flatpak };
       if (f.apt && (sistema.apt || simular)) return { tipo: 'apt', id: f.apt };
     }
+    // Apps web (ventana propia) e instaladores oficiales: funcionan en cualquier sistema
+    if (f.web) return { tipo: 'web', id: f.web };
+    if (f.script && SCRIPTS[f.script]) return { tipo: 'script', id: f.script };
     return null;
   }
 
@@ -119,6 +138,8 @@ module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, en
     if (f.winget && inst.winget.has(f.winget.toLowerCase())) { const w = inst.winget.get(f.winget.toLowerCase()); return { instalado: true, via: 'winget', version: w.version, actualizable: !!w.disponible && w.disponible !== w.version ? w.disponible : null }; }
     if (f.flatpak && inst.flatpak.has(f.flatpak)) return { instalado: true, via: 'flatpak' };
     if (f.apt && inst.apt.has(f.apt)) return { instalado: true, via: 'apt' };
+    if (f.web && webapps.instalada(a.id)) return { instalado: true, via: 'web' };
+    if (f.script && scriptHecho(f.script)) return { instalado: true, via: 'script' };
     return { instalado: false };
   }
 
@@ -251,6 +272,26 @@ module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, en
       if (r.codigo === 126 || r.codigo === 127) return { ok: false, error: 'Permiso denegado' };
       return r.codigo === 0 ? { ok: true } : { ok: false, error: ultimaLinea(r.salida) || 'apt falló' };
     }
+    if (f.tipo === 'web') {
+      if (accion === 'desinstalar') return webapps.desinstalar(a);
+      emitir(job.id, 'instalando', 60, 'Creando la app…', extra);
+      return webapps.instalar(a);
+    }
+    if (f.tipo === 'script') {
+      const sc = SCRIPTS[f.id];
+      if (accion === 'desinstalar') { for (const p of sc.borrar) { try { fs.rmSync(p, { recursive: true, force: true }); } catch {} } return { ok: true }; }
+      emitir(job.id, 'descargando', null, 'Descargando el instalador oficial…', extra);
+      const r = await correr(sc.instalar[0], sc.instalar[1], { alLinea: (l) => progreso(job.id, 'instalando', null, l.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').trim().slice(0, 90), extra), guardar: guarda });
+      if (scriptHecho(f.id)) {
+        // Lanzador en el menu Inicio: se abre en la Terminal Antuan
+        if (LINUX) try {
+          const dir = path.join(HOME, '.local/share/applications'); fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(path.join(dir, 'antuan-' + f.id + '.desktop'), ['[Desktop Entry]', 'Type=Application', `Name=${a.nombre}`, `Comment=${a.descripcion}`, `Exec=${sc.bin}`, 'Icon=utilities-terminal', 'Terminal=true', 'Categories=Development;', ''].join('\n'), { mode: 0o755 });
+        } catch {}
+        return { ok: true };
+      }
+      return { ok: false, error: cancelando ? 'Cancelado' : ultimaLinea(r.salida) || 'El instalador falló' };
+    }
     return { ok: false, error: 'Sin fuente para este sistema' };
   }
 
@@ -283,6 +324,12 @@ module.exports = function registrar({ ASKS, CMDS, app, shell, log = () => {}, en
     if (!a) return { ok: false, error: 'App desconocida' };
     if (simular) { L('abrir (simulado)', id); return { ok: true, simulado: true }; }
     if (a.cli) return { ok: false, error: 'Es una herramienta de línea de comandos' };
+    const st0 = estadoInstalado(a, await instalados());
+    if (st0.via === 'web' || (!st0.instalado && a.fuentes.web && !a.fuentes.winget)) return webapps.abrir(a.id);
+    if (st0.via === 'script') {
+      if (!abrirTerminal) return { ok: false, error: 'No hay terminal' };
+      abrirTerminal("'" + SCRIPTS[a.fuentes.script].bin + "'"); return { ok: true };
+    }
     if (WIN) {
       const lista = await appsMenuInicio();
       const objetivo = norm(a.menu || a.nombre);

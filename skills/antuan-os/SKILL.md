@@ -36,6 +36,23 @@ Necesita WSL con Debian (Toni debe ejecutar como administrador `wsl --install -d
 
 `prueba-vm.sh <iso> <carpeta-capturas> <segundos> [disco.qcow2]` (QEMU + KVM en WSL, UEFI OVMF; instalar `qemu-system-x86 qemu-system-gui qemu-utils ovmf netpbm socat`). Con `PANTALLA=gtk,zoom-to-fit=off` Toni la ve en una ventana (nunca pantalla completa; Ctrl+Alt+G suelta el ratón). `vm-teclas.sh` y `vm-clic.sh` mandan teclas y clics por QMP (teclado español en la VM; Ctrl+Alt+F2 da consola con el usuario de prueba `umbra`, Ctrl+Alt+F7 vuelve al escritorio). `revisar-iso.sh` y `revisar-drivers.sh` listan piezas y firmware dentro de la ISO. Copia la ISO a `/root/prueba.iso` antes de arrancarla si vas a remendar la original a la vez.
 
+## Versiones
+
+- **1.0** (2026-10-20/22, `antuan-20261020.iso`): todo lo de arriba más los arreglos de la lista de abajo. Probada en VM y en PCs reales del trabajo de su padre (arranca, instala, login).
+- **1.1** (2026-10-23, `antuan-1.1.iso`, hecha con `os/build/hacer-1.1.sh` remendando la 1.0):
+  - **IAs en la Tienda** (categoría "Inteligencia artificial" y pack "ias"): Claude, ChatGPT, Gemini, Copilot, Perplexity, Le Chat, DeepSeek y NotebookLM son **apps web** (`fuentes.web` en `tienda-catalogo.js`). `shell/webapps.js` crea `~/.local/share/applications/antuan-web-<id>.desktop` con `Exec=/opt/umbra/umbra --webapp=<id>` y su icono. La instancia que ya corre lo recibe por `second-instance` y abre una ventana sin barras con su propia sesión (`persist:web-<id>`), agente de Chrome normal (si no, Google bloquea el login) y ventanas emergentes de inicio de sesión permitidas.
+  - **Claude Code**: `fuentes.script: 'claude-code'` ejecuta el instalador oficial (`curl -fsSL https://claude.ai/install.sh | bash`; en Windows `irm https://claude.ai/install.ps1 | iex`). Queda en `~/.local/bin/claude` con un lanzador que lo abre en la Terminal Antuan.
+  - **Alpaca** (Flathub `com.jeffser.Alpaca`): IA local sin internet.
+  - **Descargas al Escritorio**: `umbra-session` hace una vez por usuario `xdg-user-dirs-update --set DOWNLOAD <Escritorio>` (Firefox, Chrome y Flatpak lo respetan) y `webapps.js` guarda las descargas de las apps web en el Escritorio.
+  - **Buscador al instante**: `buscador-linux.js` indexa al arrancar y vigila la carpeta personal con `fs.watch` (inotify, recursivo por carpeta de primer nivel). Lo nuevo, renombrado o borrado entra o sale del índice en ~1 s; además se rehace entero cada 10 min.
+  - Verificado en VM: instalar Claude desde la Tienda y abrirlo en su ventana (pantalla de login de claude.ai). Probado en Windows: el buscador ve un archivo nuevo del Escritorio en 1,5 s.
+
+## Dónde vive todo esto
+
+- Repositorio público: **https://github.com/tonigomezram-del/antuan-os** (cuenta de GitHub de Toni: `tonigomezram-del`). Es a la vez marketplace de Claude Code: `/plugin marketplace add tonigomezram-del/antuan-os` y `/plugin install antuan-os@antuan-os`.
+- Al cambiar algo: copia los archivos tocados de `UmbraOS/` a `skills/antuan-os/fuente/`, sube `version` en `.claude-plugin/plugin.json` (1.1 → 1.2...), apunta los cambios en "Versiones", y haz `git commit` + `git tag vX.Y` + `git push --tags`. Las ISO no van en git (2 GB): se regeneran con los scripts.
+- La publicación en la biblioteca de la organización (herramienta PublishPlugin) falló el 2026-10-23 porque Claude Code no cargaba la política de la organización; por eso se usa GitHub.
+
 ## Fallos ya encontrados y arreglados (no repetirlos)
 
 - `--hostname/--username` ya no existen en lb config; `policykit-1` → `polkitd pkexec`.
@@ -54,10 +71,15 @@ Necesita WSL con Debian (Toni debe ejecutar como administrador `wsl --install -d
 ## Limitaciones que Toni ya sabe
 
 - **Fortnite, Valorant y juegos con antitrampas** no funcionan en Linux (Epic anunció EAC Linux v2 en oct-2026, sin fecha). No ayudar a saltarse antitrampas.
-- No hay app de escritorio de Claude para Linux (usar claude.ai en el navegador). Office de escritorio y Adobe tampoco (OnlyOffice / Office web).
+- No hay app de escritorio oficial de Claude para Linux: desde la 1.1 la Tienda la instala como app web en ventana propia (igual que ChatGPT, Gemini...). Office de escritorio y Adobe tampoco (OnlyOffice / Office web).
 - En su portátil Windows no deja encoger C: porque `$MFT` está al final del disco: instalar junto a Windows requiere MiniTool/AOMEI o usar "Borrar disco".
 
 ## Reglas con Toni
+
+- Se cabrea con las estimaciones optimistas ("2 min" que son 20): da porcentajes reales mirando el progreso de verdad.
+- La máquina virtual siempre en ventana pequeña (`PANTALLA=gtk,zoom-to-fit=off`), nunca a pantalla completa.
+- No le reinicies el PC ni le propongas reiniciar a Windows para jugar: lo descartó.
+- Pendiente de 2026-10-22: dijo que en un PC instalado veía "todo gris"; pedirle foto si vuelve a pasar. Chrome (Flatpak) está en `/var/lib/flatpak/exports/share/applications/com.google.Chrome.desktop`.
 
 - Antes de que borre Windows de un PC suyo, recuérdale **copiar la carpeta `UmbraOS`** (código e ISO) a un disco externo o Drive.
 - Las órdenes de administrador las ejecuta él (dáselas en un bloque para copiar); no reinicies su PC sin que lo pida.

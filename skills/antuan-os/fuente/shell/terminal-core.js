@@ -37,6 +37,7 @@ function registrar() {
     const sh = shellPorDefecto();
     // Antuan OS: las apps de consola (Terminal=true) se abren aqui; al terminar queda el shell
     if (LINUX && typeof o.orden === 'string' && o.orden) sh.args = ['-l', '-c', o.orden + '; exec "${SHELL:-/bin/bash}" -l'];
+    else if (typeof o.orden === 'string' && o.orden) sh.args = ['-NoLogo', '-NoExit', '-Command', PROMPT_PS + '; & ' + o.orden];
     const cwd = o.cwd && fs.existsSync(o.cwd) ? o.cwd : os.homedir();
     const p = pty.spawn(sh.file, sh.args, {
       name: 'xterm-256color', cols: o.cols || 100, rows: o.rows || 30, cwd,

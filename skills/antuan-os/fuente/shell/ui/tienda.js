@@ -91,7 +91,7 @@ function accion(a) {
   if (sel.has(a.id)) return `<button class="get marked" data-act="desmarcar">${icon('check')}Marcada</button>`;
   return `<button class="get" data-act="obtener">Obtener</button>`;
 }
-const fuenteTxt = { winget: 'winget', flatpak: 'Flathub', apt: 'apt' };
+const fuenteTxt = { winget: 'winget', flatpak: 'Flathub', apt: 'apt', web: 'App web', script: 'Instalador oficial' };
 function tile(a) {
   const cls = ['app', sel.has(a.id) ? 'sel' : '', a.instalado ? 'inst' : '', !a.disponible && !a.instalado ? 'off' : ''].join(' ');
   return `<div class="${cls}" data-id="${a.id}" role="button" tabindex="0" aria-pressed="${sel.has(a.id)}">

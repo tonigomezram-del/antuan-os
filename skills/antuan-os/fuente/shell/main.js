@@ -281,6 +281,7 @@ CMDS.tienda = (paquete) => abrirAppUmbra('tienda', paquete ? { paquete } : {});
 require('./archivos-core')({ ASKS, CMDS, app, shell, clipboard, nativeImage, log: (...a) => log(...a) });
 require('./tienda-core')({
   ASKS, CMDS, app, shell, log: (...a) => log(...a),
+  abrirTerminal: (orden) => abrirAppUmbra('terminal', { orden }),
   enviar: (c, ...d) => { for (const v of appWins) if (v._tipo === 'tienda' && !v.isDestroyed()) v.webContents.send(c, ...d); }
 });
 // Apps propias que aparecen en el Inicio, el Spotlight y el dock como cualquier otra
@@ -953,6 +954,8 @@ app.on('second-instance', (_, argv) => {
   const ar = argv.find((a) => a.startsWith('--archivos'));
   const ti = argv.find((a) => a.startsWith('--tienda'));
   const te = argv.find((a) => a.startsWith('--terminal'));
+  const wa = argv.find((a) => a.startsWith('--webapp='));
+  if (wa) return require('./webapps').abrir(wa.slice(9));
   if (te) return abrirAppUmbra('terminal', te.includes('=') ? { dir: te.slice(te.indexOf('=') + 1) } : {});
   if (ar) return abrirAppUmbra('archivos', ar.includes('=') && ar.split('=')[1] ? { dir: ar.slice(ar.indexOf('=') + 1) } : {});
   if (ti) return abrirAppUmbra('tienda', ti.includes('=') && ti.split('=')[1] ? { paquete: ti.slice(ti.indexOf('=') + 1) } : {});

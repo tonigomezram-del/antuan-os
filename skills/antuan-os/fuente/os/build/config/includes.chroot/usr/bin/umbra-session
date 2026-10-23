@@ -6,6 +6,10 @@ export GTK_THEME=Adwaita:dark
 export QT_QPA_PLATFORMTHEME=gtk3
 
 xdg-user-dirs-update
+# Lo que se descarga (Firefox, Chrome, apps) va directo al Escritorio, como pidio Toni (una vez por usuario)
+if [ ! -e "$HOME/.config/antuan-descargas" ]; then
+  xdg-user-dirs-update --set DOWNLOAD "$(xdg-user-dir DESKTOP)" && touch "$HOME/.config/antuan-descargas"
+fi
 xsetroot -cursor_name left_ptr
 setxkbmap es 2>/dev/null || true
 

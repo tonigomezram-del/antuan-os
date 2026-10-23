@@ -10,6 +10,7 @@
 const FH = (id) => `https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${id}.png`;
 
 const CATEGORIAS = [
+  { id: 'ia', nombre: 'Inteligencia artificial', icono: 'spark' },
   { id: 'navegadores', nombre: 'Navegadores', icono: 'globe' },
   { id: 'comunicacion', nombre: 'Comunicación', icono: 'chat' },
   { id: 'multimedia', nombre: 'Música y vídeo', icono: 'music' },
@@ -26,7 +27,33 @@ const a = (id, nombre, categoria, color, descripcion, fuentes, extra = {}) => ({
   ...extra
 });
 
+// Icono de una web (favicon grande servido por Google)
+const FAV = (dominio) => `https://www.google.com/s2/favicons?domain=${dominio}&sz=128`;
+
 const APPS = [
+  // ---------------------------------------------------------------- Inteligencia artificial
+  // web: app web en su propia ventana (Antuan la instala como app de verdad). script: instalador oficial.
+  a('claude', 'Claude', 'ia', '#d97757', 'El asistente de Anthropic: escribe, programa, analiza documentos y piensa contigo.',
+    { winget: 'Anthropic.Claude', web: 'https://claude.ai' }, { menu: 'Claude', icono: FAV('claude.ai'), destacado: 'Tu compañero para pensar, escribir y programar. En su propia ventana.' }),
+  a('claudecode', 'Claude Code', 'ia', '#c15f3c', 'Claude programando contigo desde la terminal: lee, edita y ejecuta tu código.',
+    { script: 'claude-code' }, { icono: FAV('claude.com') }),
+  a('chatgpt', 'ChatGPT', 'ia', '#10a37f', 'El asistente de OpenAI para preguntas, textos e imágenes.',
+    { web: 'https://chatgpt.com' }, { icono: FAV('chatgpt.com') }),
+  a('gemini', 'Gemini', 'ia', '#4e7cf6', 'La IA de Google, conectada con Gmail, Drive y YouTube.',
+    { web: 'https://gemini.google.com/app' }, { icono: FAV('gemini.google.com') }),
+  a('copilot', 'Microsoft Copilot', 'ia', '#2a7de1', 'El asistente de Microsoft con búsqueda web.',
+    { web: 'https://copilot.microsoft.com' }, { icono: FAV('copilot.microsoft.com') }),
+  a('perplexity', 'Perplexity', 'ia', '#20808d', 'Buscador con IA que responde citando sus fuentes.',
+    { web: 'https://www.perplexity.ai' }, { icono: FAV('perplexity.ai') }),
+  a('lechat', 'Le Chat (Mistral)', 'ia', '#fa520f', 'La IA europea de Mistral, rápida y gratuita.',
+    { web: 'https://chat.mistral.ai' }, { icono: FAV('mistral.ai') }),
+  a('deepseek', 'DeepSeek', 'ia', '#4d6bfe', 'Asistente gratuito muy bueno en matemáticas y código.',
+    { web: 'https://chat.deepseek.com' }, { icono: FAV('deepseek.com') }),
+  a('notebooklm', 'NotebookLM', 'ia', '#7b61ff', 'Sube tus apuntes y PDFs y pregúntales lo que quieras.',
+    { web: 'https://notebooklm.google.com' }, { icono: FAV('notebooklm.google.com') }),
+  a('alpaca', 'Alpaca', 'ia', '#e8a33d', 'IA en tu propio PC, sin internet ni cuentas (modelos locales con Ollama).',
+    { flatpak: 'com.jeffser.Alpaca' }),
+
   // ---------------------------------------------------------------- Navegadores
   a('chrome', 'Google Chrome', 'navegadores', '#4285f4', 'El navegador de Google, rápido y sincronizado con tu cuenta.',
     { winget: 'Google.Chrome', flatpak: 'com.google.Chrome' }, { menu: 'Google Chrome' }),
@@ -196,6 +223,7 @@ const APPS = [
 
 // Packs tipo Ninite: un clic marca varias apps.
 const PACKS = [
+  { id: 'ias', nombre: 'Inteligencia artificial', descripcion: 'Claude, Claude Code, ChatGPT y Gemini', color: '#d97757', icono: 'spark', apps: ['claude', 'claudecode', 'chatgpt', 'gemini'] },
   { id: 'esencial', nombre: 'Lo esencial', descripcion: 'Navegador, música, vídeo y compresor', color: '#9db4ff', icono: 'spark', apps: ['firefox', 'vlc', 'spotify', '7zip', 'libreoffice'] },
   { id: 'gaming', nombre: 'Gaming', descripcion: 'Tiendas, voz y emisión', color: '#ff6b81', icono: 'game', apps: ['steam', 'epic', 'heroic', 'discord', 'obs', 'lutris', 'protonup'] },
   { id: 'creador', nombre: 'Creadores', descripcion: 'Imagen, 3D, audio y vídeo', color: '#ffb057', icono: 'palette', apps: ['gimp', 'krita', 'blender', 'inkscape', 'audacity', 'kdenlive', 'obs'] },
