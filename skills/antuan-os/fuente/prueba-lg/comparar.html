@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../UmbraOS/shell/ui/umbra.css"><link rel="stylesheet" href="../UmbraOS/shell/ui/liquid.css">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#0d0f14;font-family:sans-serif;color:#fff}
+#fondo{position:fixed;inset:0}
+.lente{position:fixed;left:120px;top:60px;width:200px;height:140px;border-radius:70px;cursor:grab;touch-action:none;background:rgba(255,255,255,.015);box-shadow:var(--lg-dx,0px) calc(4px + var(--lg-dy,0px)) 12px rgba(0,0,0,.15),inset 0 1.6px 16px rgba(0,0,0,.09),inset 0 -1.6px 16px rgba(255,255,255,.07)}
+.caja{position:fixed;left:24px;bottom:24px;width:330px;padding:20px;display:flex;flex-direction:column;gap:20px;background:rgba(20,22,30,.55)!important}
+.fila{display:flex;align-items:center;gap:12px;font-size:14px}</style></head><body>
+<div id="fondo"></div>
+<div class="lente" id="lente"></div>
+<div class="caja"><div class="fila">Volumen <input type="range" min="0" max="100" value="55" id="r"></div>
+<div class="fila">Wifi <button class="switch" aria-checked="true"></button> Bluetooth <button class="switch" aria-checked="false"></button></div></div>
+<script src="../UmbraOS/shell/ui/liquid.js"></script>
+<script>
+const c=document.createElement('canvas');c.width=innerWidth;c.height=innerHeight;const g=c.getContext('2d');
+g.fillStyle='#f4f1ea';g.fillRect(0,0,c.width,c.height);
+const gr=g.createLinearGradient(c.width*.55,0,c.width,c.height);gr.addColorStop(0,'#0ea5e9');gr.addColorStop(.5,'#22c55e');gr.addColorStop(1,'#eab308');g.fillStyle=gr;g.fillRect(c.width*.55,30,c.width*.42,c.height-60);
+g.strokeStyle='#111';g.lineWidth=3;for(let i=0;i<14;i++){g.beginPath();g.moveTo(c.width*.55+i*28,30);g.lineTo(c.width*.55+i*28+120,c.height-30);g.stroke();}
+g.fillStyle='#111';g.font='bold 40px Georgia';g.fillText('Liquid Glass — Precision Lens',30,80);
+g.font='18px Georgia';const t='Drag the capsule to bend the page. This lens is a compact SVG displacement rig that refracts whatever sits beneath it. The field comes from a rounded bezel profile; pixels are pushed along its gradient, then topped with a subtle specular bloom for depth.';
+let y=130,l='';for(const w of t.split(' ')){if(g.measureText(l+w).width>c.width*.48){g.fillText(l,30,y);y+=28;l='';}l+=w+' ';}g.fillText(l,30,y);
+const u=c.toDataURL();document.getElementById('fondo').style.background='url('+u+')';document.documentElement.style.setProperty('--wp-img','url('+u+')');
+const lente=document.getElementById('lente');const pos=()=>{};
+lente.style.backdropFilter='url(#'+LiquidGlass.filtroFijo(200,140,70,{},'lente')+')';
+const mu=LiquidGlass.muelle(lente,{reposo:.85,activo:1,estira:.0005});
+let arr=null;lente.onpointerdown=e=>{arr={x:e.clientX-lente.offsetLeft,y:e.clientY-lente.offsetTop};lente.setPointerCapture(e.pointerId);mu.tocar();};
+lente.onpointermove=e=>{if(!arr)return;lente.style.left=(e.clientX-arr.x)+'px';lente.style.top=(e.clientY-arr.y)+'px';mu.mover();};
+lente.onpointerup=()=>{arr=null;mu.soltar();};
+const r=document.getElementById('r');const pinta=()=>r.style.setProperty('--v',r.value+'%');r.addEventListener('input',pinta);pinta();
+for(const s of document.querySelectorAll('.switch'))s.onclick=()=>s.setAttribute('aria-checked',s.getAttribute('aria-checked')!=='true');
+LiquidGlass.iniciar();LiquidGlass.controles();pos();
+</script></body></html>

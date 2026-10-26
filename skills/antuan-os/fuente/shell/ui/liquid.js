@@ -201,7 +201,7 @@
     // solo la lente escala con el tamano; los controles y el contenido mantienen un borde fino (el texto se lee)
     const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
-    const e = m.escala * (modo === 'contenido' ? a.contenido : 1);
+    const e = modo === 'contenido' ? Math.min(m.escala, a.bisel) * a.contenido : m.escala;
     q('esc-r').setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
     q('esc-g').setAttribute('scale', e.toFixed(2));
     q('esc-bl').setAttribute('scale', (e * (1 - a.cromatica)).toFixed(2));

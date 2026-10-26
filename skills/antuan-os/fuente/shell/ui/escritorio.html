@@ -95,6 +95,16 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 .wd-in { padding: 16px 18px; border-radius: inherit; }
 /* lo que el cristal dobla del contenido no se sale de la forma redondeada */
 .wd.lg { border-radius: 38px; }
+/* Tarjetas de grupos en cristal liquido: la misma lente que los widgets (filtro a su medida, liquido()) */
+body.cards .group.lg { border-radius: 34px; padding: 18px 16px 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16));
+  box-shadow: 0 18px 44px -18px rgba(0,0,0,.6), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); }
+body.cards .group.lg::before { display: none; }
+body.cards .group.lg h3 { margin-left: 10px; }
+/* Iconos: gotitas de cristal con su borde brillante (filtro pequeno compartido) */
+body.cards .group.lg .cell .tile { background: rgba(255,255,255,.05); backdrop-filter: var(--lg-gota, none);
+  box-shadow: 0 8px 18px -8px rgba(0,0,0,.55), inset 0 1px 6px rgba(0,0,0,.08), inset 0 -1px 6px rgba(255,255,255,.06); }
+body.cards .group.lg .cell .tile::before { display: none; }
 .wd.lg .wd-in { clip-path: inset(0 round 38px); padding: 20px 24px; }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
@@ -183,6 +193,21 @@ function render() {
       list.map((it) => `<button class="cell" data-id="${esc(it.id)}" title="${esc(it.name)}">${tile(it)}<span class="n ${it.name.split(/\s+/).some((w) => w.length > 12) ? 'long' : ''}">${esc(it.name)}</span></button>`).join('')
     }</div></section>`;
   }).join('');
+  grupoLiquido();
+}
+// Cristal liquido de las tarjetas: filtro a la medida de cada una, y uno pequeno compartido para los iconos
+const tarjetas = new ResizeObserver((es) => { for (const e of es) ponTarjeta(e.target); });
+function ponTarjeta(el) {
+  if (!window.LiquidGlass) return;
+  const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+  if (w > 20 && h > 20) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 34, {}, 'lente')})`;
+}
+function grupoLiquido() {
+  let c0; try { c0 = cfg; } catch { c0 = info.config; }   // la primera vez cfg aun no existe
+  if (!window.LiquidGlass || (c0 && c0.liquidGlass === false) || document.documentElement.classList.contains('contrast')) return;
+  const t = parseInt(getComputedStyle(document.body).getPropertyValue('--tile')) || 58;
+  document.body.style.setProperty('--lg-gota', `url(#${LiquidGlass.filtroFijo(t, t, Math.round(t * 0.3), {}, 'lente')})`);
+  for (const g of $$('.group')) { g.classList.add('lg'); ponTarjeta(g); tarjetas.observe(g); }
 }
 async function load() { items = await U.desktopItems(); render(); }
 await load();
@@ -269,6 +294,7 @@ const WIDGETS = ['tiempo', 'musica', 'sistema', 'notas'];
 const WNAMES = { tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
 let cfg = info.config;
 U.on('config', (c) => { cfg = c; if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(c)); });
+if (window.LiquidGlass) LiquidGlass.alCambiar(() => grupoLiquido());
 if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(cfg));
 const wcfg = () => Object.assign({ tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
 function saveW(id, patch) { const w = wcfg(); w[id] = Object.assign({}, w[id], patch); cfg.widgets = w; U.config({ widgets: w }); }

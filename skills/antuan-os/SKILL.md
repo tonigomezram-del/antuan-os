@@ -126,3 +126,8 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - La curva se calcula con esquinas al menos tan redondas como el bisel, para que no salgan pliegues en diagonal. El brillo usa la esquina real.
   - El contenido doblado se recorta con `clip-path: inset(0 round 22px)`.
 - Aumento tipo lupa (`lgLupa`, 0–50 %, por defecto 12 %): a la curva del borde se suma un aumento centrado en todo el cristal. Así lo de detrás se ve más grande y curvado por toda la superficie, y no solo en el borde (con el centro plano, Toni no veía que se deformara lo de fuera). El mapa se calcula en píxeles y luego se normaliza (`escala = 2 × desplazamiento máximo`). El contenido y los controles no llevan lupa.
+- Tarjetas de grupos del escritorio en cristal líquido:
+  - `.group.lg` lleva radio de 34 px y un filtro a su medida (`grupoLiquido()` y `ponTarjeta()` tras cada `render()`).
+  - Los iconos son "gotitas" con un filtro pequeño compartido (`--lg-gota`).
+  - El filtro del contenido dobla como mucho `bisel × contenido` px, así que no repite la nube ni la portada en el borde.
+  - Copia del escritorio para pruebas: `node prueba-lg/hacer-escritorio.js` (crea `prueba-lg/escritorio.html` con la config real y datos simulados) y la captura con `prueba-lg/app`. Los scripts de prueba están en `fuente/prueba-lg/`.

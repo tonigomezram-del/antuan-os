@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../UmbraOS/shell/ui/liquid.css">
+<style>html,body{margin:0;height:100%;background:repeating-linear-gradient(115deg,rgba(0,0,0,.85) 0 3px,transparent 3px 22px),linear-gradient(120deg,#0ea5e9,#22c55e 45%,#eab308 70%,#f97316)}
+.c{position:absolute;background:rgba(255,255,255,.015);box-shadow:0 4px 12px rgba(0,0,0,.18),inset 0 1.6px 16px rgba(0,0,0,.09),inset 0 -1.6px 16px rgba(255,255,255,.07)}
+.in{position:absolute;inset:0;padding:16px 18px;color:#fff;font:600 20px sans-serif;border-radius:inherit;clip-path:inset(0 round 22px)}</style></head><body>
+<div class="c" id="p" style="left:60px;top:80px;width:70px;height:70px;border-radius:22px"></div>
+<div class="c" id="m" style="left:200px;top:60px;width:180px;height:110px;border-radius:55px"></div>
+<div class="c" id="g" style="left:460px;top:40px;width:300px;height:290px;border-radius:22px"><div class="in">TIEMPO<br><span style="font-size:60px;font-weight:200">22°</span><br>Olot · Nublado</div></div>
+<script src="../UmbraOS/shell/ui/liquid.js"></script>
+<script>
+for(const el of document.querySelectorAll('.c')){const w=el.offsetWidth,h=el.offsetHeight,r=parseFloat(el.style.borderRadius);el.style.backdropFilter='url(#'+LiquidGlass.filtroFijo(w,h,r,{},'lente')+')';const i=el.querySelector('.in');if(i)i.style.filter='url(#'+LiquidGlass.filtroFijo(w,h,r,{},'contenido')+')';}
+</script></body></html>
