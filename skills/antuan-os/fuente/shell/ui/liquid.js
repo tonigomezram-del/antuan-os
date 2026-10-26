@@ -130,17 +130,22 @@
   // Filtro con aberracion cromatica: tres desplazamientos (R, G, B) con fuerzas un poco distintas
   // modo 'lente' (dock, paneles): el brillo se suma en pantalla. modo 'control' (sliders, interruptores):
   // como en la demo, el canto toma los colores de debajo muy saturados y encima va el brillo suave.
-  function crearFiltro(idF, modo = 'lente') {
+  // cromatico: tres refracciones (R, G, B). Con el efecto cromatico casi a cero se hace una sola (3 veces menos trabajo)
+  function crearFiltro(idF, modo = 'lente', cromatico = true) {
     const f = el('filter', { id: idF, x: '0', y: '0', width: '100%', height: '100%', 'color-interpolation-filters': 'sRGB', filterUnits: 'objectBoundingBox', primitiveUnits: 'userSpaceOnUse' }, contenedor());
     el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '0.5', result: 'b', 'data-k': 'blur' }, f);
     el('feImage', { result: 'm', preserveAspectRatio: 'none', 'data-k': 'desp' }, f);
     const canales = [['r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['bl', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0']];
-    for (const [c, m] of canales) {
-      el('feDisplacementMap', { in: 'b', in2: 'm', xChannelSelector: 'R', yChannelSelector: 'G', result: 'd' + c, 'data-k': 'esc-' + c }, f);
-      el('feColorMatrix', { in: 'd' + c, type: 'matrix', values: m, result: 'c' + c }, f);
+    if (cromatico) {
+      for (const [c, m] of canales) {
+        el('feDisplacementMap', { in: 'b', in2: 'm', xChannelSelector: 'R', yChannelSelector: 'G', result: 'd' + c, 'data-k': 'esc-' + c }, f);
+        el('feColorMatrix', { in: 'd' + c, type: 'matrix', values: m, result: 'c' + c }, f);
+      }
+      el('feBlend', { in: 'cr', in2: 'cg', mode: 'screen', result: 'rg' }, f);
+      el('feBlend', { in: 'rg', in2: 'cbl', mode: 'screen', result: 'disp' }, f);
+    } else {
+      el('feDisplacementMap', { in: 'b', in2: 'm', xChannelSelector: 'R', yChannelSelector: 'G', result: 'disp', 'data-k': 'esc-g' }, f);
     }
-    el('feBlend', { in: 'cr', in2: 'cg', mode: 'screen', result: 'rg' }, f);
-    el('feBlend', { in: 'rg', in2: 'cbl', mode: 'screen', result: 'disp' }, f);
     el('feColorMatrix', { in: 'disp', type: 'saturate', values: '1.3', result: 'sat', 'data-k': 'sat' }, f);
     el('feImage', { result: 'e', preserveAspectRatio: 'none', 'data-k': 'espec' }, f);
     const ct = el('feComponentTransfer', { in: 'e', result: 'ef' }, f);
@@ -187,9 +192,9 @@
       im.setAttribute('href', m[k]); im.setAttribute('x', MARGEN); im.setAttribute('y', MARGEN);
       im.setAttribute('width', w); im.setAttribute('height', h);
     }
-    q('esc-r').setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
+    q('esc-r')?.setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
     q('esc-g').setAttribute('scale', m.escala.toFixed(2));
-    q('esc-bl').setAttribute('scale', (m.escala * (1 - a.cromatica)).toFixed(2));
+    q('esc-bl')?.setAttribute('scale', (m.escala * (1 - a.cromatica)).toFixed(2));
     q('blur').setAttribute('stdDeviation', a.desenfoque);
     q('sat').setAttribute('values', a.saturacion);
     q('alfa').setAttribute('slope', a.especular);
@@ -204,7 +209,8 @@
     wp.appendChild(lente);
     const c = { wp, lente, filtro: crearFiltro(idF), clave: '' };
     wp._liquid = c; capas.add(c);
-    new ResizeObserver(() => actualizar(c)).observe(wp);
+    let espera = 0;
+    new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(() => actualizar(c), 160); }).observe(wp);
     actualizar(c);
   }
 
@@ -215,12 +221,12 @@
     const a = conPieza({ ...AJUSTES, ...resto }, pieza), clave = [w, h, r, modo, JSON.stringify(a)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
     // solo la lente escala con el tamano; los controles y el contenido mantienen un borde fino (el texto se lee)
-    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo, a.cromatica >= 0.015), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
     const e = modo === 'contenido' ? Math.min(m.escala, a.bisel) * a.contenido : m.escala;
-    q('esc-r').setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
+    q('esc-r')?.setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
     q('esc-g').setAttribute('scale', e.toFixed(2));
-    q('esc-bl').setAttribute('scale', (e * (1 - a.cromatica)).toFixed(2));
+    q('esc-bl')?.setAttribute('scale', (e * (1 - a.cromatica)).toFixed(2));
     q('blur').setAttribute('stdDeviation', modo === 'contenido' ? 0 : a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
     fijos.set(clave, idF);
     return idF;
@@ -351,7 +357,8 @@
   function vigilarControles() {
     controles();
     if (vigia) return;
-    vigia = new MutationObserver(() => controles());
+    let pendiente = false;   // como mucho una revision por fotograma (el reloj y el dock cambian sin parar)
+    vigia = new MutationObserver(() => { if (pendiente) return; pendiente = true; requestAnimationFrame(() => { pendiente = false; controles(); }); });
     vigia.observe(document.body, { childList: true, subtree: true });
   }
 

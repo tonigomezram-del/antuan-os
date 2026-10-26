@@ -102,8 +102,8 @@ body.cards .group.lg { border-radius: 34px; padding: 18px 16px 10px;
 body.cards .group.lg::before { display: none; }
 body.cards .group.lg h3 { margin-left: 10px; }
 /* Iconos: gotitas de cristal con su borde brillante (filtro pequeno compartido) */
-body.cards .group.lg .cell .tile { background: rgba(255,255,255,.05); backdrop-filter: var(--lg-gota, none);
-  box-shadow: 0 8px 18px -8px rgba(0,0,0,.55), inset 0 1px 6px rgba(0,0,0,.08), inset 0 -1px 6px rgba(255,255,255,.06); }
+body.cards .group.lg .cell .tile { background: radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.16), rgba(255,255,255,.03) 60%), rgba(255,255,255,.04); backdrop-filter: none;
+  box-shadow: 0 8px 18px -8px rgba(0,0,0,.55), inset 0 1px 1px rgba(255,255,255,.35), inset 0 -1px 1px rgba(255,255,255,.12), inset 0 0 0 .5px rgba(255,255,255,.18); }
 body.cards .group.lg .cell .tile::before { display: none; }
 .wd.lg .wd-in { clip-path: inset(0 round 38px); padding: 20px 24px; }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
@@ -196,7 +196,7 @@ function render() {
   grupoLiquido();
 }
 // Cristal liquido de las tarjetas: filtro a la medida de cada una, y uno pequeno compartido para los iconos
-const tarjetas = new ResizeObserver((es) => { for (const e of es) ponTarjeta(e.target); });
+const tarjetas = new ResizeObserver((es) => { for (const e of es) { clearTimeout(e.target._lgT); e.target._lgT = setTimeout(() => ponTarjeta(e.target), 160); } });
 function ponTarjeta(el) {
   if (!window.LiquidGlass) return;
   const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
@@ -205,8 +205,6 @@ function ponTarjeta(el) {
 function grupoLiquido() {
   let c0; try { c0 = cfg; } catch { c0 = info.config; }   // la primera vez cfg aun no existe
   if (!window.LiquidGlass || (c0 && c0.liquidGlass === false) || document.documentElement.classList.contains('contrast')) return;
-  const t = parseInt(getComputedStyle(document.body).getPropertyValue('--tile')) || 58;
-  document.body.style.setProperty('--lg-gota', `url(#${LiquidGlass.filtroFijo(t, t, Math.round(t * 0.3), { pieza: 'gota' }, 'lente')})`);
   for (const g of $$('.group')) { g.classList.add('lg'); ponTarjeta(g); tarjetas.observe(g); }
 }
 async function load() { items = await U.desktopItems(); render(); }
@@ -347,7 +345,8 @@ function liquido(el) {
     const dentro = el.querySelector('.wd-in');
     dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'contenido')})` : '';
   };
-  new ResizeObserver(pon).observe(el); pon();
+  let espera = 0;
+  new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(pon, 160); }).observe(el); pon();
   LiquidGlass.alCambiar(pon);
   el._mu = LiquidGlass.muelle(el, { reposo: 1, activo: 1.045, estira: 0.00035 });
 }

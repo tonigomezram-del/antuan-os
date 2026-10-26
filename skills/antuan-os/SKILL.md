@@ -138,3 +138,8 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - `dock` (capas del dock y la bandeja): bisel ×1,15, lupa ×0,6.
   - Se pasa con `filtroFijo(w, h, r, { pieza: 'tarjeta' }, 'lente')`.
   - A Toni le molesta que se note "el mismo cristal estirado": cada pieza nueva debe tener su propio diseño.
+- Rendimiento ("va petadísimo", 2026-10-26):
+  - Los iconos ya no llevan lente propia (eran más de 20 `backdrop-filter` a la vez); el canto de gota se pinta con sombras.
+  - Los filtros se rehacen 160 ms después de que la pieza deje de cambiar de tamaño (la ampliación del dock lo cambiaba en cada fotograma y se regeneraba el mapa píxel a píxel).
+  - Con el efecto cromático por debajo de 0,015 se usa una sola refracción en vez de tres.
+  - El vigilante de controles revisa la página como mucho una vez por fotograma.
