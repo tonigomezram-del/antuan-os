@@ -62,8 +62,8 @@
         dx = -c.nx * m; dy = -c.ny * m;
       }
       id.data[o] = 128 + dx * 127; id.data[o + 1] = 128 + dy * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
-      // brillo especular: resplandor a lo largo del bisel donde la normal mira a la luz (y al lado opuesto),
-      // mas un canto fino y nitido
+      // brillo especular (el de la lente de prueba): resplandor a lo largo del bisel donde la normal mira a la
+      // luz (y al lado opuesto), mas un canto fino y nitido
       if (c.d >= 0 && c.d < bisel) {
         const t = c.d / bisel, cara = Math.abs(c.nx * L.x + c.ny * L.y);
         const bloom = Math.pow(cara, 2) * Math.pow(1 - t, 3) * 0.85;

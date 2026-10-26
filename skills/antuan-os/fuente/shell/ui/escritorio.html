@@ -85,10 +85,11 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
   backdrop-filter: blur(26px) saturate(160%); box-shadow: 0 20px 50px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
   animation: fadeUp .7s var(--ease) both; transition: box-shadow .2s; }
 /* Liquid Glass: el widget refracta el fondo y los iconos que tiene detras (filtro SVG de liquid.js) */
-.wd.lg { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,.16);
-  box-shadow: var(--lg-dx, 0px) calc(18px + var(--lg-dy, 0px)) 44px -18px rgba(0,0,0,.6),
+.wd.lg { background: rgba(255,255,255,.015); backdrop-filter: none;
+  box-shadow: var(--lg-dx, 0px) calc(4px + var(--lg-dy, 0px)) 12px rgba(0,0,0,.15),
     inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); will-change: transform; }
 .wd.lg .body, .wd.lg h4 { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.wd.lg::before { display: none; } /* el canto lo pinta el brillo de la lente */
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
@@ -308,7 +309,7 @@ function liquido(el) {
   const pon = () => {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
-    const id = LiquidGlass.filtroFijo(w, h, 22, { bisel: 22, grosor: 110, desenfoque: 1.2, cromatica: 0.06, especular: 0.9, saturacion: 1.3 }, 'lente');
+    const id = LiquidGlass.filtroFijo(w, h, 22, {}, 'lente') // los mismos valores que la lente de prueba;
     el.style.backdropFilter = `url(#${id})`;
   };
   new ResizeObserver(pon).observe(el); pon();
