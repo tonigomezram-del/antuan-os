@@ -84,7 +84,7 @@ html.lg .wp::before { display: none; }
 html.lg .wp::after { display: none; }
 /* Cristal transparente como en la demo: sin tinte, sombra exterior suave y sombras interiores claras/oscuras */
 html.lg .glass:has(.wp) {
-  background: rgba(255,255,255,.015);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16));
   box-shadow: 0 4px 12px rgba(0,0,0,.15), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07);
 }
 html.lg .glass:has(.wp)::before { display: none; }

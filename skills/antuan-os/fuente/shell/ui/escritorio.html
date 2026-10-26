@@ -85,11 +85,14 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
   backdrop-filter: blur(26px) saturate(160%); box-shadow: 0 20px 50px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
   animation: fadeUp .7s var(--ease) both; transition: box-shadow .2s; }
 /* Liquid Glass: el widget refracta el fondo y los iconos que tiene detras (filtro SVG de liquid.js) */
-.wd.lg { background: rgba(255,255,255,.015); backdrop-filter: none;
-  box-shadow: var(--lg-dx, 0px) calc(4px + var(--lg-dy, 0px)) 12px rgba(0,0,0,.15),
+.wd.lg { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16));
+  box-shadow: var(--lg-dx, 0px) calc(18px + var(--lg-dy, 0px)) 44px -18px rgba(0,0,0,.6),
     inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); will-change: transform; }
 .wd.lg .body, .wd.lg h4 { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
 .wd.lg::before { display: none; } /* el canto lo pinta el brillo de la lente */
+/* El contenido va en .wd-in, que mide lo mismo que el widget, para que la lente tambien lo doble */
+.wd { padding: 0; }
+.wd-in { padding: 16px 18px; border-radius: inherit; }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
@@ -262,7 +265,8 @@ document.addEventListener('contextmenu', (e) => {
 const WIDGETS = ['tiempo', 'musica', 'sistema', 'notas'];
 const WNAMES = { tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
 let cfg = info.config;
-U.on('config', (c) => { cfg = c; });
+U.on('config', (c) => { cfg = c; if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(c)); });
+if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(cfg));
 const wcfg = () => Object.assign({ tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
 function saveW(id, patch) { const w = wcfg(); w[id] = Object.assign({}, w[id], patch); cfg.widgets = w; U.config({ widgets: w }); }
 
@@ -290,7 +294,7 @@ function mountWidgets() {
     const c = wcfg()[id]; if (!c.on) return;
     const el = document.createElement('section');
     el.className = 'wd'; el.dataset.w = id; el.style.animationDelay = (300 + i * 90) + 'ms';
-    el.innerHTML = `<h4>${WNAMES[id]}<button class="x" title="Ocultar">${icon('x')}</button></h4><div class="body"></div>`;
+    el.innerHTML = `<div class="wd-in"><h4>${WNAMES[id]}<button class="x" title="Ocultar">${icon('x')}</button></h4><div class="body"></div></div>`;
     document.body.appendChild(el);
     if (c.x != null) { el.style.left = c.x + 'px'; el.style.top = c.y + 'px'; el.dataset.custom = '1'; }
     RENDER[id]($('.body', el));
@@ -309,16 +313,19 @@ function liquido(el) {
   const pon = () => {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
-    const id = LiquidGlass.filtroFijo(w, h, 22, {}, 'lente') // los mismos valores que la lente de prueba;
-    el.style.backdropFilter = `url(#${id})`;
+    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 22, {}, 'lente')})`;
+    // el texto y los iconos de dentro tambien se doblan y separan en colores cerca del canto (Ajustes > Contenido)
+    const dentro = el.querySelector('.wd-in');
+    dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 22, {}, 'contenido')})` : '';
   };
   new ResizeObserver(pon).observe(el); pon();
+  LiquidGlass.alCambiar(pon);
   el._mu = LiquidGlass.muelle(el, { reposo: 1, activo: 1.045, estira: 0.00035 });
 }
 // Arrastrar un widget por su titulo; se guarda donde lo sueltes.
 document.addEventListener('pointerdown', (e) => {
   const h = e.target.closest('.wd h4'); if (!h || e.target.closest('.x')) return;
-  const el = h.parentElement, r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
+  const el = h.closest('.wd'), r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
   el.classList.add('drag'); el.style.right = 'auto';
   if (el._mu) el._mu.tocar();
   const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px'; if (el._mu) el._mu.mover(); };

@@ -10,7 +10,16 @@
   const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
   const N = 128;               // muestras del perfil del bisel
   // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
-  const AJUSTES = { bisel: 30, grosor: 150, refraccion: 1.5, cromatica: 0.06, desenfoque: 0.5, especular: 1, saturacion: 1.3 };
+  const AJUSTES = { bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4 };
+  // Ajustes del Centro (Personalizacion > Cristal liquido) -> valores del efecto. Por defecto, los de arriba.
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  function desdeConfig(c = {}) {
+    return {
+      refraccion: num(c.lgRefraccion, 150) / 100, cromatica: num(c.lgCromatica, 6) / 100, grosor: num(c.lgGrosor, 110),
+      desenfoque: num(c.lgDesenfoque, 12) / 10, especular: num(c.lgBrillo, 90) / 100, tinte: num(c.lgTinte, 16) / 100,
+      contenido: num(c.lgContenido, 40) / 100
+    };
+  }
 
   // Perfil del borde: superficie convexa tipo squircle, altura 0 en el canto y 1 donde acaba el bisel
   const altura = (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4);
@@ -62,13 +71,14 @@
         dx = -c.nx * m; dy = -c.ny * m;
       }
       id.data[o] = 128 + dx * 127; id.data[o + 1] = 128 + dy * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
-      // brillo especular (el de la lente de prueba): resplandor a lo largo del bisel donde la normal mira a la
-      // luz (y al lado opuesto), mas un canto fino y nitido
-      if (c.d >= 0 && c.d < bisel) {
-        const t = c.d / bisel, cara = Math.abs(c.nx * L.x + c.ny * L.y);
-        const bloom = Math.pow(cara, 2) * Math.pow(1 - t, 3) * 0.85;
-        const canto = c.d < 1.5 ? 0.55 + 0.45 * cara : 0;
-        const al = Math.min(1, bloom + canto * (1 - c.d / 1.5));
+      // brillo especular como en iOS: una linea fina y nitida en el canto, fuerte donde la normal mira a la
+      // luz (arriba a la izquierda) y a su opuesto (abajo a la derecha), casi nada en los lados; y un halo
+      // muy corto (4 px) solo en esas dos zonas
+      if (c.d >= 0 && c.d < 4) {
+        const cara = Math.abs(c.nx * L.x + c.ny * L.y), foco = Math.pow(cara, 3);
+        const linea = c.d < 1.6 ? (0.1 + 0.9 * foco) * (1 - c.d / 1.6) : 0;
+        const halo = 0.22 * foco * Math.pow(1 - c.d / 4, 2);
+        const al = Math.min(1, linea + halo);
         is.data[o] = is.data[o + 1] = is.data[o + 2] = 255; is.data[o + 3] = al * 255;
       }
     }
@@ -106,7 +116,9 @@
     el('feImage', { result: 'e', preserveAspectRatio: 'none', 'data-k': 'espec' }, f);
     const ct = el('feComponentTransfer', { in: 'e', result: 'ef' }, f);
     el('feFuncA', { type: 'linear', slope: '1', 'data-k': 'alfa' }, ct);
-    if (modo === 'control') {
+    if (modo === 'contenido') {
+      el('feBlend', { in: 'disp', in2: 'disp', mode: 'normal' }, f);
+    } else if (modo === 'control') {
       el('feComposite', { in: 'sat', in2: 'e', operator: 'in', result: 'borde' }, f);
       el('feBlend', { in: 'borde', in2: 'disp', mode: 'normal', result: 'conBorde' }, f);
       el('feBlend', { in: 'ef', in2: 'conBorde', mode: 'normal' }, f);
@@ -155,14 +167,15 @@
   // Filtro para un tamano fijo (lentes con backdrop-filter: sliders, interruptores...): se cachea por tamano
   const fijos = new Map();
   function filtroFijo(w, h, r, extra = {}, modo = 'control') {
-    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, modo, JSON.stringify(extra)].join('|');
+    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, modo, JSON.stringify(a)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
     const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
-    q('esc-r').setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
-    q('esc-g').setAttribute('scale', m.escala.toFixed(2));
-    q('esc-bl').setAttribute('scale', (m.escala * (1 - a.cromatica)).toFixed(2));
-    q('blur').setAttribute('stdDeviation', a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
+    const e = m.escala * (modo === 'contenido' ? a.contenido : 1);
+    q('esc-r').setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
+    q('esc-g').setAttribute('scale', e.toFixed(2));
+    q('esc-bl').setAttribute('scale', (e * (1 - a.cromatica)).toFixed(2));
+    q('blur').setAttribute('stdDeviation', modo === 'contenido' ? 0 : a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
     fijos.set(clave, idF);
     return idF;
   }
@@ -226,8 +239,9 @@
     const caja = document.createElement('span'); caja.className = 'lg-range';
     inp.parentNode.insertBefore(caja, inp); caja.appendChild(inp);
     const bola = document.createElement('span'); bola.className = 'lg-thumb'; caja.appendChild(bola);
-    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, cromatica: 0.1, desenfoque: 0, especular: 0.4, saturacion: 7 });
+    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, desenfoque: 0, especular: 0.4, saturacion: 7 });
     bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    alCambiar(() => bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, desenfoque: 0, especular: 0.4, saturacion: 7 })})`));
     const mu = muelle(bola, { reposo: 0.625, activo: 1, estira: 0.0006 });
     const sitio = () => {
       const min = +inp.min || 0, max = inp.max === '' ? 100 : +inp.max, v = (+inp.value - min) / ((max - min) || 1);
@@ -248,9 +262,10 @@
   // Interruptor: la bola (elemento propio) crece al pulsar y se vuelve cristal; al cambiar salta con muelle
   function interruptorLiquido(sw) {
     if (sw._lg) return; sw._lg = true;
-    const id = filtroFijo(39, 30, 15, { bisel: 9, grosor: 34, cromatica: 0.1, desenfoque: 0.2, especular: 0.5, saturacion: 6 });
+    const opc = { bisel: 9, grosor: 34, desenfoque: 0.2, especular: 0.5, saturacion: 6 };
     const bola = document.createElement('span'); bola.className = 'lg-knob';
-    bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(39, 30, 15, opc)})`);
+    alCambiar(() => bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(39, 30, 15, opc)})`));
     sw.appendChild(bola);
     const destino = () => (sw.getAttribute('aria-checked') === 'true' ? 14 : 0);
     const mu = muelle(bola, { reposo: 0.667, activo: 1, x: destino(), estira: 0.0007 });
@@ -294,11 +309,23 @@
     vigia.observe(document.body, { childList: true, subtree: true });
   }
 
+  const oyentes = new Set();
+  function alCambiar(fn) { oyentes.add(fn); }
+
   window.LiquidGlass = {
     filtroFijo, muelle, gelatina, controles: vigilarControles,
     ajustes: AJUSTES,
     iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
-    ajustar(nuevos) { Object.assign(AJUSTES, nuevos); for (const c of capas) { c.clave = ''; actualizar(c); } },
+    desdeConfig, alCambiar,
+    // nuevos ajustes: se rehacen las capas del fondo y avisan a quien tenga filtros a medida (widgets, controles)
+    ajustar(nuevos) {
+      const antes = JSON.stringify(AJUSTES);
+      Object.assign(AJUSTES, nuevos);
+      document.documentElement.style.setProperty('--lg-tinte', AJUSTES.tinte);
+      if (JSON.stringify(AJUSTES) === antes) return;
+      for (const c of capas) { c.clave = ''; actualizar(c); }
+      for (const fn of oyentes) { try { fn(AJUSTES); } catch { } }
+    },
     apagar() { document.documentElement.classList.remove('lg'); }
   };
 })();

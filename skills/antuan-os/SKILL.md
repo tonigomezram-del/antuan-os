@@ -114,3 +114,7 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - La animación de entrada `fadeUp` se quita al terminar (`animationend`), porque si no, fija el transform.
   - Las tarjetas de grupos son "cristal sólido": rebotan al apretar su fondo (`solido()`), igual que los paneles `.panel.glass`.
 - Dock: `gelatina(dock)` usa el muelle con la propiedad `scale` (el transform ya lo usa para colocarse). Crece al apretar y, al arrastrarlo entre bordes, se estira en el eje del movimiento (`dock._lgGel.mover()` en el pointermove de `umbra.js`).
+- Ajustes (Centro > Personalización > Cristal líquido). Claves de config.json, en enteros:
+  - `liquidGlass` (activar o desactivar), `lgRefraccion` (150 → 1,5), `lgCromatica` (6 → 0,06), `lgGrosor` (110), `lgDesenfoque` (12 → 1,2), `lgBrillo` (90 → 0,9), `lgTinte` (16 → 0,16) y `lgContenido` (40 → 0,4: cuánto se doblan el texto y los iconos de dentro de los widgets, filtro modo `contenido` sobre `.wd-in`).
+  - `LiquidGlass.desdeConfig(cfg)` los convierte y `LiquidGlass.ajustar()` rehace capas y filtros (`alCambiar`).
+  - Los valores de fábrica son la versión que Toni eligió (la "segunda"): línea de brillo fina, grosor 110, desenfoque 1,2 y tinte 0,16. NO volver al brillo ancho en todo el bisel: no le gustó.

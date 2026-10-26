@@ -381,6 +381,17 @@ const SECTIONS = {
           <div class="row"><div class="lbl"><b>Tamaño de los iconos del dock</b></div><input type="range" min="36" max="64" value="${C.dockSize}" data-k="dockSize"></div>
           <div class="row"><div class="lbl"><b>Ampliación al pasar el ratón</b></div>${sw(C.magnify !== false, 'data-b="magnify"')}</div>
           <div class="row" style="display:block"><div class="lbl" style="margin-bottom:10px"><b>Posición del dock</b><span>También puedes arrastrarlo directamente.</span></div><div class="edge-pick">${[['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']].map(([v, n]) => `<button data-edge="${v}" aria-pressed="${C.edge === v}">${n}</button>`).join('')}</div></div></div>
+        <div class="card section"><h3>Cristal líquido <span class="r faint">Como el de iOS: refracta lo que tiene detrás</span></h3>
+          <div class="row"><div class="lbl"><b>Cristal líquido</b><span>Dock, bandeja, widgets, sliders e interruptores</span></div>${sw(C.liquidGlass !== false, 'data-b="liquidGlass"')}</div>
+          ${[['lgRefraccion', 'Refracción', 'Cuánto dobla lo que hay detrás', 0, 300, 150],
+              ['lgCromatica', 'Efecto cromático', 'Separación de colores (arcoíris) en el borde', 0, 30, 6],
+              ['lgGrosor', 'Grosor del cristal', 'Más grueso, más se curva el borde', 30, 200, 110],
+              ['lgDesenfoque', 'Desenfoque', 'De vidrio limpio a vidrio esmerilado', 0, 60, 12],
+              ['lgBrillo', 'Brillo del borde', 'El reflejo de luz en el canto', 0, 150, 90],
+              ['lgTinte', 'Tinte oscuro', 'Más alto, el texto se lee mejor', 0, 60, 16],
+              ['lgContenido', 'Afectar al contenido', 'El texto y los iconos de dentro también se doblan', 0, 100, 40]]
+            .map(([k, n, d, mi, ma, def]) => `<div class="row"><div class="lbl"><b>${n}</b><span>${d}</span></div><input type="range" min="${mi}" max="${ma}" value="${C[k] ?? def}" data-k="${k}"></div>`).join('')}
+          <div class="row"><div class="lbl"><b>Valores de fábrica</b></div><button class="btn" data-lg-reset>Restablecer</button></div></div>
         <div class="card section"><h3>Fondo de pantalla Antuan</h3><div class="walls">${WALLS.map(([n, a, b, c]) => `<button class="wall" data-wall="${a},${b},${c}" style="background:${wallCss(a, b, c)}">${n}</button>`).join('')}</div></div>
         <div class="card section"><h3>Escritorio y sonido</h3>
           <div class="row"><div class="lbl"><b>Escritorio Antuan</b><span>Iconos organizados, reloj y widgets</span></div>${sw(C.desktop !== false, 'data-b="desktop"')}</div>
@@ -399,6 +410,11 @@ const SECTIONS = {
           toast('Tema ' + th.dataset.theme);
           await makeWallpaper(...th.dataset.wall.split(',').map(Number));
           return;
+        }
+        if (e.target.closest('[data-lg-reset]')) {
+          const def = { lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
+          setC(def); for (const [k, v] of Object.entries(def)) { const r = $(`#pane [data-k="${k}"]`); if (r) { r.value = v; paint(r); } }
+          toast('Cristal líquido de fábrica'); return;
         }
         const sg = e.target.closest('[data-seg]');
         if (sg) { setC({ [sg.dataset.seg]: sg.dataset.v }); $$(`[data-seg="${sg.dataset.seg}"]`).forEach((x) => x.setAttribute('aria-pressed', x === sg)); return; }
