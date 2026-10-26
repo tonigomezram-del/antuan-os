@@ -103,3 +103,8 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Los `.switch` hacen lo mismo con su `::after`.
   - El dock y la bandeja se aplastan como gelatina al pulsarlos (animación de la propiedad `scale`).
   - Prueba visual: `Opensource ai/prueba-lg/` con el servidor `prueba-lg` de `.claude/launch.json`.
+- Animación de la lente (`LiquidGlass.muelle(el, { reposo, activo, x, estira })`) copiada de la demo:
+  - Usa tres muelles amortiguados: tamaño, posición x y estiramiento.
+  - Al tocar crece con rebote. Al moverse se estira en la dirección del movimiento según la velocidad medida en pantalla (máximo ×1,22), y la sombra se queda atrás (`--lg-dx`/`--lg-dy`). Al soltar vuelve oscilando.
+  - La usan la bola de los sliders (0,625 → 1) y la de los interruptores (`.lg-knob`, 0,667 → 1; salta 14 px con muelle al cambiar `aria-checked`).
+  - `LiquidGlass.filtroFijo(w, h, r, ajustes, 'lente')` da el filtro para usar con `backdrop-filter` en una lente suelta, como en `prueba-lg/comparar.html`.

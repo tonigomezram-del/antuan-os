@@ -1,34 +1,33 @@
 /* Controles liquidos (liquid.js): sliders e interruptores como los de iOS 26.
  * En reposo la bola es una pildora blanca; al pulsar crece con muelle y se vuelve una lente de cristal
- * (backdrop-filter con el filtro SVG de refraccion) a traves de la que se ve la barra doblada. */
+ * (backdrop-filter con el filtro SVG de refraccion) a traves de la que se ve la barra doblada.
+ * El tamano, el estiramiento y el rebote los pone liquid.js (muelle) en transform; la sombra sigue al
+ * movimiento con --lg-dx/--lg-dy. */
 .lg-range { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; }
 .lg-range input[type=range] { width: 100%; }
 .lg-range input[type=range]::-webkit-slider-thumb { width: 30px; height: 19px; margin-top: -6.5px; opacity: 0; transform: none; }
-/* La bola mide lo mismo que su lente (48x30) y en reposo se ve a 0,625 (30x19) */
+/* La bola mide lo mismo que su lente (48x30); en reposo el muelle la deja a 0,625 (30x19) */
 .lg-thumb {
   position: absolute; top: 50%; width: 48px; height: 30px; margin: -15px 0 0 -24px; border-radius: 15px; pointer-events: none;
-  background: #fff; box-shadow: 0 3px 12px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.08);
-  transform: scale(.625); transition: transform .5s cubic-bezier(.3,1.6,.5,1), background .22s, box-shadow .22s;
+  background: #fff; will-change: transform;
+  box-shadow: var(--lg-dx, 0px) calc(3px + var(--lg-dy, 0px)) 12px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.08);
+  transition: background .2s, box-shadow .2s;
 }
-.lg-range.activo .lg-thumb {
-  transform: scale(1); background: rgba(255,255,255,.04); backdrop-filter: var(--lg-filtro);
-  box-shadow: 0 6px 18px rgba(0,0,0,.28), inset 0 0 0 .5px rgba(255,255,255,.55), inset 0 1px 1px rgba(255,255,255,.4);
-  transition: transform .42s cubic-bezier(.3,1.7,.5,1), background .15s, box-shadow .15s;
+.lg-range.activo .lg-thumb, .lg-pulsado .lg-knob {
+  background: rgba(255,255,255,.04); backdrop-filter: var(--lg-filtro);
+  box-shadow: var(--lg-dx, 0px) calc(4px + var(--lg-dy, 0px)) 14px rgba(0,0,0,.22),
+    inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07),
+    inset 0 0 0 .5px rgba(255,255,255,.55);
+  transition: background .12s, box-shadow .12s;
 }
 
-/* Interruptor: pista 44x24, bola pildora 26x20 que pulsada crece a 39x30 y se vuelve cristal */
+/* Interruptor: pista 44x24 y bola propia (.lg-knob, 39x30) que en reposo se ve a 0,667 (26x20) */
 html.lg .switch { width: 44px; height: 24px; border-radius: 24px; overflow: visible; }
-html.lg .switch::after {
-  top: -3px; left: -4.5px; width: 39px; height: 30px; border-radius: 15px;
-  background: #fff; box-shadow: 0 3px 10px rgba(0,0,0,.4);
-  transform: translateX(0) scale(.667);
-  transition: transform .5s cubic-bezier(.3,1.6,.5,1), background .2s, box-shadow .2s;
+html.lg .switch::after { display: none; }
+.lg-knob {
+  position: absolute; top: -3px; left: -4.5px; width: 39px; height: 30px; border-radius: 15px; pointer-events: none;
+  background: #fff; will-change: transform;
+  box-shadow: var(--lg-dx, 0px) calc(3px + var(--lg-dy, 0px)) 10px rgba(0,0,0,.4);
+  transition: background .2s, box-shadow .2s;
 }
-html.lg .switch:active::after {
-  width: 39px; background: rgba(255,255,255,.04); backdrop-filter: var(--lg-filtro);
-  box-shadow: 0 6px 16px rgba(0,0,0,.25), inset 0 0 0 .5px rgba(255,255,255,.55), inset 0 1px 1px rgba(255,255,255,.4);
-  transform: translateX(4px) scale(1);
-}
-html.lg .switch[aria-checked="true"]::after { transform: translateX(14px) scale(.667); }
-html.lg .switch[aria-checked="true"]:active::after { transform: translateX(10px) scale(1); }
-html.reduce-motion .lg-thumb, html.reduce-motion.lg .switch::after { transition: none; }
+html:not(.lg) .lg-knob { display: none; }

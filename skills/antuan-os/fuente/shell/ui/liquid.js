@@ -152,12 +152,12 @@
     actualizar(c);
   }
 
-  // Filtro para un tamano fijo (lentes de sliders e interruptores con backdrop-filter): se cachea por tamano
+  // Filtro para un tamano fijo (lentes con backdrop-filter: sliders, interruptores...): se cachea por tamano
   const fijos = new Map();
-  function filtroFijo(w, h, r, extra = {}) {
-    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, JSON.stringify(extra)].join('|');
+  function filtroFijo(w, h, r, extra = {}, modo = 'control') {
+    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, modo, JSON.stringify(extra)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
-    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, 'control'), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
     q('esc-r').setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
     q('esc-g').setAttribute('scale', m.escala.toFixed(2));
@@ -165,6 +165,50 @@
     q('blur').setAttribute('stdDeviation', a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
     fijos.set(clave, idF);
     return idF;
+  }
+
+  /* ---------- Muelle: la fisica de la lente de la demo ----------
+   * Al tocar crece con rebote; mientras se mueve se estira en la direccion del movimiento (mas cuanto mas
+   * rapido, medido en pantalla) y la sombra se queda atras; al soltar vuelve a su tamano oscilando.
+   * Tres muelles amortiguados (tamano, posicion x y estiramiento) integrados en cada fotograma. */
+  const reducido = () => document.documentElement.classList.contains('reduce-motion');
+  function muelle(el, o) {
+    const est = o.estira ?? 0.00045;
+    const m = { s: o.reposo, vs: 0, S: o.reposo, x: o.x || 0, vx: 0, X: o.x || 0, ex: 0, vex: 0, ey: 0, vey: 0, EX: 0, EY: 0, px: null, py: null, t: 0, vivo: false, agarrado: false };
+    function pinta() {
+      const mag = Math.min(0.22, Math.hypot(m.ex, m.ey)), ang = Math.atan2(m.ey, m.ex);
+      const sx = m.s * (1 + mag), sy = m.s * (1 - mag * 0.55);
+      el.style.transform = `translateX(${m.x.toFixed(2)}px) rotate(${ang.toFixed(4)}rad) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) rotate(${(-ang).toFixed(4)}rad)`;
+      el.style.setProperty('--lg-dx', (-m.ex * 22).toFixed(2) + 'px');
+      el.style.setProperty('--lg-dy', (-m.ey * 22).toFixed(2) + 'px');
+      el.style.setProperty('--lg-on', ((m.s - o.reposo) / ((o.activo - o.reposo) || 1)).toFixed(3));
+    }
+    function paso(t) {
+      const dt = m.t ? Math.min(0.032, (t - m.t) / 1000) : 0.016; m.t = t;
+      const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (m.px !== null && dt > 0) {
+        m.EX = m.EX * 0.6 + ((cx - m.px) / dt) * est * 0.4;
+        m.EY = m.EY * 0.6 + ((cy - m.py) / dt) * est * 0.4;
+      }
+      m.px = cx; m.py = cy; m.EX *= 0.85; m.EY *= 0.85;
+      m.vs += ((m.S - m.s) * 420 - m.vs * 20) * dt; m.s += m.vs * dt;
+      m.vx += ((m.X - m.x) * 520 - m.vx * 24) * dt; m.x += m.vx * dt;
+      m.vex += ((m.EX - m.ex) * 300 - m.vex * 15) * dt; m.ex += m.vex * dt;
+      m.vey += ((m.EY - m.ey) * 300 - m.vey * 15) * dt; m.ey += m.vey * dt;
+      pinta();
+      const quieto = !m.agarrado && Math.abs(m.S - m.s) < 1e-3 && Math.abs(m.vs) < 1e-2 && Math.abs(m.X - m.x) < 0.05 && Math.abs(m.vx) < 0.1
+        && Math.hypot(m.ex, m.ey, m.vex, m.vey, m.EX, m.EY) < 2e-3;
+      if (quieto) { m.vivo = false; m.t = 0; m.px = null; m.ex = m.ey = m.vex = m.vey = 0; pinta(); return; }
+      requestAnimationFrame(paso);
+    }
+    const arranca = () => { if (reducido()) { m.s = m.S; m.x = m.X; pinta(); return; } if (!m.vivo) { m.vivo = true; requestAnimationFrame(paso); } };
+    pinta();
+    return {
+      tocar() { m.agarrado = true; m.S = o.activo; arranca(); },
+      soltar() { m.agarrado = false; m.S = o.reposo; arranca(); },
+      ir(x, conSalto = true) { m.X = x; if (!conSalto) { m.x = x; m.vx = 0; pinta(); } else arranca(); },
+      mover() { arranca(); }
+    };
   }
 
   /* ---------- Controles liquidos: sliders e interruptores como en iOS 26 ---------- */
@@ -178,12 +222,14 @@
     const bola = document.createElement('span'); bola.className = 'lg-thumb'; caja.appendChild(bola);
     const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, cromatica: 0.1, desenfoque: 0, especular: 0.4, saturacion: 7 });
     bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    const mu = muelle(bola, { reposo: 0.625, activo: 1, estira: 0.0006 });
     const sitio = () => {
       const min = +inp.min || 0, max = inp.max === '' ? 100 : +inp.max, v = (+inp.value - min) / ((max - min) || 1);
       const w = inp.clientWidth; bola.style.left = (TW / 2 + v * Math.max(0, w - TW)) + 'px';
+      mu.mover();
     };
-    const on = () => { caja.classList.add('activo'); sitio(); };
-    const off = () => caja.classList.remove('activo');
+    const on = () => { caja.classList.add('activo'); mu.tocar(); sitio(); };
+    const off = () => { if (!caja.classList.contains('activo')) return; caja.classList.remove('activo'); mu.soltar(); };
     inp.addEventListener('input', sitio);
     inp.addEventListener('pointerdown', on);
     window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
@@ -193,17 +239,25 @@
     Object.defineProperty(inp, 'value', { get() { return d.get.call(this); }, set(v) { d.set.call(this, v); sitio(); } });
     sitio();
   }
-  // Interruptor: la bola crece al pulsar y se vuelve cristal; al soltar salta con muelle al otro lado
+  // Interruptor: la bola (elemento propio) crece al pulsar y se vuelve cristal; al cambiar salta con muelle
   function interruptorLiquido(sw) {
     if (sw._lg) return; sw._lg = true;
-    const id = filtroFijo(30, 24, 12, { bisel: 9, grosor: 34, cromatica: 0.1, desenfoque: 0.2, especular: 0.5, saturacion: 6 });
-    sw.style.setProperty('--lg-filtro', `url(#${id})`);
+    const id = filtroFijo(39, 30, 15, { bisel: 9, grosor: 34, cromatica: 0.1, desenfoque: 0.2, especular: 0.5, saturacion: 6 });
+    const bola = document.createElement('span'); bola.className = 'lg-knob';
+    bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    sw.appendChild(bola);
+    const destino = () => (sw.getAttribute('aria-checked') === 'true' ? 14 : 0);
+    const mu = muelle(bola, { reposo: 0.667, activo: 1, x: destino(), estira: 0.0007 });
+    new MutationObserver(() => mu.ir(destino())).observe(sw, { attributes: true, attributeFilter: ['aria-checked'] });
+    const off = () => { if (!sw.classList.contains('lg-pulsado')) return; sw.classList.remove('lg-pulsado'); mu.soltar(); };
+    sw.addEventListener('pointerdown', () => { sw.classList.add('lg-pulsado'); mu.tocar(); });
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
   }
-  // Pulsar un cristal (dock, bandeja): se aplasta un poco hacia el dedo y vuelve con rebote, como gelatina
+  // Pulsar un cristal (dock, bandeja): se aplasta un poco y vuelve con rebote, como gelatina
   function gelatina(el) {
     if (el._lgGel) return; el._lgGel = true;
     el.addEventListener('pointerdown', () => {
-      if (document.documentElement.classList.contains('reduce-motion')) return;
+      if (reducido()) return;
       // propiedad "scale" aparte: no pisa el transform con el que el dock se coloca en su borde
       el.animate([{ scale: '1' }, { scale: '1.025 0.97', offset: 0.35 }, { scale: '0.995 1.008', offset: 0.7 }, { scale: '1' }],
         { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' });
@@ -223,7 +277,7 @@
   }
 
   window.LiquidGlass = {
-    filtroFijo, controles: vigilarControles,
+    filtroFijo, muelle, controles: vigilarControles,
     ajustes: AJUSTES,
     iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
     ajustar(nuevos) { Object.assign(AJUSTES, nuevos); for (const c of capas) { c.clave = ''; actualizar(c); } },
