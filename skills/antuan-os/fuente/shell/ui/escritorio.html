@@ -200,13 +200,13 @@ const tarjetas = new ResizeObserver((es) => { for (const e of es) ponTarjeta(e.t
 function ponTarjeta(el) {
   if (!window.LiquidGlass) return;
   const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
-  if (w > 20 && h > 20) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 34, {}, 'lente')})`;
+  if (w > 20 && h > 20) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 34, { pieza: 'tarjeta' }, 'lente')})`;
 }
 function grupoLiquido() {
   let c0; try { c0 = cfg; } catch { c0 = info.config; }   // la primera vez cfg aun no existe
   if (!window.LiquidGlass || (c0 && c0.liquidGlass === false) || document.documentElement.classList.contains('contrast')) return;
   const t = parseInt(getComputedStyle(document.body).getPropertyValue('--tile')) || 58;
-  document.body.style.setProperty('--lg-gota', `url(#${LiquidGlass.filtroFijo(t, t, Math.round(t * 0.3), {}, 'lente')})`);
+  document.body.style.setProperty('--lg-gota', `url(#${LiquidGlass.filtroFijo(t, t, Math.round(t * 0.3), { pieza: 'gota' }, 'lente')})`);
   for (const g of $$('.group')) { g.classList.add('lg'); ponTarjeta(g); tarjetas.observe(g); }
 }
 async function load() { items = await U.desktopItems(); render(); }
@@ -342,7 +342,7 @@ function liquido(el) {
   const pon = () => {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
-    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'lente')})`;
+    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 38, { pieza: 'widget' }, 'lente')})`;
     // el texto y los iconos de dentro tambien se doblan y separan en colores cerca del canto (Ajustes > Contenido)
     const dentro = el.querySelector('.wd-in');
     dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'contenido')})` : '';

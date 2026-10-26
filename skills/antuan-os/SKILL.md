@@ -131,3 +131,10 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Los iconos son "gotitas" con un filtro pequeño compartido (`--lg-gota`).
   - El filtro del contenido dobla como mucho `bisel × contenido` px, así que no repite la nube ni la portada en el borde.
   - Copia del escritorio para pruebas: `node prueba-lg/hacer-escritorio.js` (crea `prueba-lg/escritorio.html` con la config real y datos simulados) y la captura con `prueba-lg/app`. Los scripts de prueba están en `fuente/prueba-lg/`.
+- Cada tipo de pieza tiene su propio diseño de cristal (`PIEZAS` en `liquid.js`, multiplica los ajustes del Centro):
+  - `gota` (iconos): bisel ×1,5, sin lupa, refracción ×0,7.
+  - `tarjeta`: más fina y plana (grosor ×0,6, lupa ×0,4).
+  - `widget`: tal cual.
+  - `dock` (capas del dock y la bandeja): bisel ×1,15, lupa ×0,6.
+  - Se pasa con `filtroFijo(w, h, r, { pieza: 'tarjeta' }, 'lente')`.
+  - A Toni le molesta que se note "el mismo cristal estirado": cada pieza nueva debe tener su propio diseño.

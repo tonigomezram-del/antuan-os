@@ -158,6 +158,21 @@
   }
 
   const capas = new Set();
+  // Cada tipo de pieza tiene su propio diseno de cristal (como en iOS): multiplica los ajustes del Centro.
+  //  gota (iconos): borde muy curvado, sin lupa, poca refraccion · tarjeta: grande, cristal mas fino y plano
+  //  widget: el cristal grueso con lupa (el de la vista previa) · dock/bandeja: borde algo mas ancho, lupa suave
+  const PIEZAS = {
+    widget: {},
+    tarjeta: { bisel: 0.75, grosor: 0.6, lupa: 0.4, refraccion: 0.9 },
+    gota: { bisel: 1.5, grosor: 0.5, lupa: 0, refraccion: 0.7, especular: 1.15 },
+    dock: { bisel: 1.15, grosor: 0.9, lupa: 0.6 }
+  };
+  function conPieza(a, pieza) {
+    const p = PIEZAS[pieza]; if (!p) return a;
+    const b = { ...a }; for (const k in p) b[k] = a[k] * p[k];
+    return b;
+  }
+
   function actualizar(c) {
     const r0 = c.wp.getBoundingClientRect();
     const w = Math.round(r0.width), h = Math.round(r0.height);
@@ -166,7 +181,7 @@
     const clave = `${w}x${h}r${radio}`;
     if (clave === c.clave) return;
     c.clave = clave;
-    const a = AJUSTES, m = mapas(w, h, radio, a), q = (k) => c.filtro.querySelector(`[data-k="${k}"]`);
+    const a = conPieza(AJUSTES, 'dock'), m = mapas(w, h, radio, a), q = (k) => c.filtro.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) {
       const im = q(k);
       im.setAttribute('href', m[k]); im.setAttribute('x', MARGEN); im.setAttribute('y', MARGEN);
@@ -196,7 +211,8 @@
   // Filtro para un tamano fijo (lentes con backdrop-filter: sliders, interruptores...): se cachea por tamano
   const fijos = new Map();
   function filtroFijo(w, h, r, extra = {}, modo = 'control') {
-    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, modo, JSON.stringify(a)].join('|');
+    const { pieza, ...resto } = extra;
+    const a = conPieza({ ...AJUSTES, ...resto }, pieza), clave = [w, h, r, modo, JSON.stringify(a)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
     // solo la lente escala con el tamano; los controles y el contenido mantienen un borde fino (el texto se lee)
     const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
