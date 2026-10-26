@@ -31,9 +31,18 @@ if [ -n "${PAQUETES:-}" ]; then
   for m in dev/pts dev sys proc; do umount -lf "$T/raiz/$m"; done
   echo "  paquetes: $PAQUETES"
 fi
+# Arranque nuevo (variable INITRD=1): se regenera el initrd dentro del sistema y se cambia tambien en la ISO
+EXTRA=()
+if [ -n "${INITRD:-}" ]; then
+  for m in proc sys dev dev/pts; do mount --bind "/$m" "$T/raiz/$m"; done
+  chroot "$T/raiz" update-initramfs -u -k all
+  for m in dev/pts dev sys proc; do umount -lf "$T/raiz/$m"; done
+  for i in "$T"/raiz/boot/initrd.img-*; do cp "$i" "$T/$(basename "$i")"; EXTRA+=(-update "$T/$(basename "$i")" "/live/$(basename "$i")"); done
+  echo "  initrd regenerado"
+fi
 mksquashfs "$T/raiz" "$T/filesystem.squashfs" -comp "$COMP" -noappend -no-progress -quiet
 xorriso -indev "$ISO" -outdev "$ISO.nuevo" -boot_image any replay \
-  -update "$T/filesystem.squashfs" /live/filesystem.squashfs 2>&1 | tail -n 1
+  -update "$T/filesystem.squashfs" /live/filesystem.squashfs "${EXTRA[@]}" 2>&1 | tail -n 1
 mv -f "$ISO.nuevo" "$ISO"
 rm -rf -- "$T"
 echo "ISO remendada: $ISO"

@@ -84,3 +84,13 @@ Necesita WSL con Debian (Toni debe ejecutar como administrador `wsl --install -d
 - Antes de que borre Windows de un PC suyo, recuérdale **copiar la carpeta `UmbraOS`** (código e ISO) a un disco externo o Drive.
 - Las órdenes de administrador las ejecuta él (dáselas en un bloque para copiar); no reinicies su PC sin que lo pida.
 - Antes de dar una ISO por buena, pruébala en la VM; cuéntale qué está probado y qué no.
+
+## Instalar sin pendrive (2026-10-26)
+
+`Instalar-Antuan-sin-pendrive.cmd` (doble clic, pide administrador) hace lo mismo que Rufus + pendrive desde el propio disco:
+1. Comprueba UEFI y que C: **no esté cifrado** (el cifrado del dispositivo de Windows 11 viene activado: Configuración → Privacidad y seguridad → Cifrado del dispositivo → Desactivado, y esperar).
+2. Copia la ISO más nueva a `C:\antuan\antuan.iso`.
+3. Copia `os/arrancador/EFI/debian/` (shim + GRUB firmados de Debian sacados de la ISO con `arrancador-esp.sh`, y un grub.cfg que abre la ISO con `loopback` y arranca con `findiso=/antuan/antuan.iso toram`) a la partición EFI.
+4. Crea con `bcdedit` una entrada "Antuan OS" y la pone solo para el siguiente arranque (`bootsequence`), quita la hibernación y reinicia.
+
+Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y el instalador puede "Borrar disco". Para eso el initrd necesita `ntfs3`: va en `usr/share/initramfs-tools/modules.d/antuan-ntfs`, y `remendar-iso.sh` con `INITRD=1` regenera el initrd y lo cambia también en la ISO. Probado en VM con `disco-sin-pendrive.sh`, que crea un disco igual al de un PC con Windows: arranca hasta el escritorio con el instalador.
