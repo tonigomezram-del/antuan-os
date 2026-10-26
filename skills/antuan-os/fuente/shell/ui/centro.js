@@ -18,6 +18,30 @@ function applyLook() {
   const n = parseInt(C.accent.slice(1), 16);
   root.style.setProperty('--accent-rgb', [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', '));
   root.classList.toggle('reduce-motion', !!C.reduceMotion);
+  if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(C));
+}
+// Vista previa del cristal liquido (Personalizacion): una lente que se arrastra sobre rayas y texto, como la web
+function vistaLiquida() {
+  const caja = document.getElementById('lgVista'), lente = document.getElementById('lgLente');
+  if (!caja || !lente || !window.LiquidGlass) return;
+  const pon = () => {
+    lente.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(180, 110, 55, {}, 'lente')})`;
+    lente.style.filter = '';
+    const dentro = lente.querySelector('.in');
+    dentro.style.setProperty('--lg-cont', LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(180, 110, 55, {}, 'contenido')})` : 'none');
+  };
+  pon(); LiquidGlass.alCambiar(pon);
+  const mu = LiquidGlass.muelle(lente, { reposo: 0.9, activo: 1, estira: 0.0005 });
+  let ag = null;
+  lente.addEventListener('pointerdown', (e) => { ag = { x: e.clientX - lente.offsetLeft, y: e.clientY - lente.offsetTop }; lente.setPointerCapture(e.pointerId); mu.tocar(); });
+  lente.addEventListener('pointermove', (e) => {
+    if (!ag) return;
+    lente.style.left = Math.max(-60, Math.min(caja.clientWidth - 120, e.clientX - ag.x)) + 'px';
+    lente.style.top = Math.max(-40, Math.min(caja.clientHeight - 70, e.clientY - ag.y)) + 'px';
+    mu.mover();
+  });
+  const fin = () => { if (ag) { ag = null; mu.soltar(); } };
+  lente.addEventListener('pointerup', fin); lente.addEventListener('pointercancel', fin);
 }
 applyLook();
 function setC(patch) { Object.assign(C, patch); U.config(patch); applyLook(); }
@@ -383,7 +407,10 @@ const SECTIONS = {
           <div class="row" style="display:block"><div class="lbl" style="margin-bottom:10px"><b>Posición del dock</b><span>También puedes arrastrarlo directamente.</span></div><div class="edge-pick">${[['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']].map(([v, n]) => `<button data-edge="${v}" aria-pressed="${C.edge === v}">${n}</button>`).join('')}</div></div></div>
         <div class="card section"><h3>Cristal líquido <span class="r faint">Como el de iOS: refracta lo que tiene detrás</span></h3>
           <div class="row"><div class="lbl"><b>Cristal líquido</b><span>Dock, bandeja, widgets, sliders e interruptores</span></div>${sw(C.liquidGlass !== false, 'data-b="liquidGlass"')}</div>
-          ${[['lgRefraccion', 'Refracción', 'Cuánto dobla lo que hay detrás', 0, 300, 150],
+          <div class="lg-vista" id="lgVista"><div class="lg-vista-fondo"></div><div class="lg-vista-lente" id="lgLente"><div class="in"><b>22°</b><span>Arrástrame</span></div></div></div>
+          <div class="row"><div class="lbl"><b>Forma de la curva</b><span>Cómo se dobla lo de fuera en el borde</span></div>${seg('lgSuperficie', [['squircle', 'Squircle'], ['circulo', 'Círculo'], ['concavo', 'Cóncavo'], ['labio', 'Labio']], C.lgSuperficie || 'squircle')}</div>
+          ${[['lgBisel', 'Ancho del borde', 'Cuánta parte del cristal está curvada', 5, 70, 22],
+              ['lgRefraccion', 'Refracción', 'Cuánto dobla lo que hay detrás', 0, 300, 150],
               ['lgCromatica', 'Efecto cromático', 'Separación de colores (arcoíris) en el borde', 0, 30, 6],
               ['lgGrosor', 'Grosor del cristal', 'Más grueso, más se curva el borde', 30, 200, 110],
               ['lgDesenfoque', 'Desenfoque', 'De vidrio limpio a vidrio esmerilado', 0, 60, 12],
@@ -401,7 +428,8 @@ const SECTIONS = {
           const cur = Object.assign({ tl: 'mission', tr: 'none', bl: 'none', br: 'desktop' }, C.corners || {})[k];
           return `<div class="row"><div class="lbl"><b>${n}</b></div><select data-corner="${k}">${[['none', 'Nada'], ['mission', 'Mission Control'], ['launcher', 'Inicio'], ['spotlight', 'Buscar'], ['desktop', 'Mostrar escritorio'], ['lock', 'Bloquear']].map(([v, t]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
         }).join('')}</div>`);
-      $$('#pane input[type=range]').forEach(paint);
+      $('#pane input[type=range]').forEach(paint);
+      vistaLiquida();
       pane.addEventListener('click', async (e) => {
         const th = e.target.closest('[data-theme]');
         if (th) {
@@ -412,8 +440,9 @@ const SECTIONS = {
           return;
         }
         if (e.target.closest('[data-lg-reset]')) {
-          const def = { lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
+          const def = { lgSuperficie: 'squircle', lgBisel: 22, lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
           setC(def); for (const [k, v] of Object.entries(def)) { const r = $(`#pane [data-k="${k}"]`); if (r) { r.value = v; paint(r); } }
+          $('[data-seg="lgSuperficie"]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === 'squircle'));
           toast('Cristal líquido de fábrica'); return;
         }
         const sg = e.target.closest('[data-seg]');

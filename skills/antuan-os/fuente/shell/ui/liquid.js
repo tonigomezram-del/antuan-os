@@ -10,23 +10,34 @@
   const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
   const N = 128;               // muestras del perfil del bisel
   // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
-  const AJUSTES = { bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4 };
+  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4 };
   // Ajustes del Centro (Personalizacion > Cristal liquido) -> valores del efecto. Por defecto, los de arriba.
   const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
   function desdeConfig(c = {}) {
     return {
+      superficie: SUPERFICIES[c.lgSuperficie] ? c.lgSuperficie : 'squircle', bisel: num(c.lgBisel, 22),
       refraccion: num(c.lgRefraccion, 150) / 100, cromatica: num(c.lgCromatica, 6) / 100, grosor: num(c.lgGrosor, 110),
       desenfoque: num(c.lgDesenfoque, 12) / 10, especular: num(c.lgBrillo, 90) / 100, tinte: num(c.lgTinte, 16) / 100,
       contenido: num(c.lgContenido, 40) / 100
     };
   }
 
-  // Perfil del borde: superficie convexa tipo squircle, altura 0 en el canto y 1 donde acaba el bisel
-  const altura = (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4);
+  // Perfil del borde (como "Surface Type" de la demo): altura de la superficie de 0 (canto) a 1 (fin del bisel)
+  //  squircle: convexo suave, amplia lo de detras (el de iOS) · circulo: convexo redondo, curva mas fuerte
+  //  concavo: hundido, encoge lo de detras · labio: sube en el canto y se hunde despues (anillo)
+  const squircle = (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4);
+  const circulo = (x) => Math.sqrt(1 - Math.pow(1 - x, 2));
+  const suave = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const SUPERFICIES = {
+    squircle, circulo,
+    concavo: (x) => 1 - circulo(1 - x),
+    labio: (x) => squircle(Math.min(1, x * 2)) * (1 - 0.7 * suave(0.45, 1, x)) + 0.3 * suave(0.45, 1, x)
+  };
 
   // Desplazamiento (en px) que sufre la luz en cada punto del bisel: un rayo vertical entra en una superficie
   // inclinada y se tuerce segun Snell. Devuelve la tabla normalizada (0..1) y el maximo en px.
-  function perfil(bisel, grosor) {
+  function perfil(bisel, grosor, superficie) {
+    const altura = SUPERFICIES[superficie] || squircle;
     const n2 = 1.5, t = new Float32Array(N + 1);
     let max = 0;
     for (let i = 0; i <= N; i++) {
@@ -35,7 +46,7 @@
       const incid = Math.atan(pendiente);                       // angulo entre el rayo vertical y la normal
       const refr = Math.asin(Math.sin(incid) / n2);
       const d = Math.tan(incid - refr) * (grosor + bisel * (1 - altura(x)));
-      t[i] = d; if (d > max) max = d;
+      t[i] = d; if (Math.abs(d) > max) max = Math.abs(d);   // en el concavo sale negativo: empuja hacia fuera
     }
     for (let i = 0; i <= N; i++) t[i] = max ? t[i] / max : 0;
     return { tabla: t, max };
@@ -54,9 +65,9 @@
   }
 
   function mapas(w, h, r, a) {
-    const bisel = Math.max(4, Math.min(a.bisel, r, w / 2, h / 2));
+    const bisel = Math.max(4, Math.min(a.bisel, w / 2 - 1, h / 2 - 1));
     // el grosor de la demo (150) es para una lente de 140 px de alto: en piezas mas bajas (el dock) se reduce igual
-    const { tabla, max } = perfil(bisel, a.grosor * Math.min(1, Math.min(w, h) / 140));
+    const { tabla, max } = perfil(bisel, a.grosor * Math.min(1, Math.min(w, h) / 140), a.superficie);
     const cd = document.createElement('canvas'), cs = document.createElement('canvas');
     cd.width = cs.width = w; cd.height = cs.height = h;
     const gd = cd.getContext('2d'), gs = cs.getContext('2d');
