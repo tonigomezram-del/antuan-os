@@ -10,6 +10,16 @@ curl -fsSL https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/act
 
 Se baja lo último y reinicia el escritorio. No hace falta pendrive ni ISO.
 
+## Actualizar Antuan en Windows
+
+Abre PowerShell y pega:
+
+```
+irm https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/actualizar.ps1 | iex
+```
+
+Vale para el Antuan instalado con Antuan-Instalar.exe y para la carpeta de código (UmbraOSshell). Cierra Antuan, cambia los archivos (guarda la versión anterior en una carpeta `.anterior`) y lo vuelve a abrir.
+
 Sistema operativo y escritorio propio de Toni Gomez, sobre **Debian 13 "trixie"**. Este repositorio es a la vez:
 
 - **El código completo** (`skills/antuan-os/fuente/`):

@@ -94,9 +94,10 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 .wd { padding: 0; }
 .wd-in { padding: 16px 18px; border-radius: inherit; }
 /* lo que el cristal dobla del contenido no se sale de la forma redondeada */
-.wd.lg { border-radius: 38px; }
+.wd.lg { border-radius: var(--lg-r-widget, 38px); }
+html.lg-cuadrado { --lg-r-widget: 22px; --lg-r-tarjeta: 20px; }
 /* Tarjetas de grupos en cristal liquido: la misma lente que los widgets (filtro a su medida, liquido()) */
-body.cards .group.lg { border-radius: 34px; padding: 18px 16px 10px;
+body.cards .group.lg { border-radius: var(--lg-r-tarjeta, 34px); padding: 18px 16px 10px;
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16));
   box-shadow: 0 18px 44px -18px rgba(0,0,0,.6), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); }
 body.cards .group.lg::before { display: none; }
@@ -105,7 +106,7 @@ body.cards .group.lg h3 { margin-left: 10px; }
 body.cards .group.lg .cell .tile { background: radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.16), rgba(255,255,255,.03) 60%), rgba(255,255,255,.04); backdrop-filter: none;
   box-shadow: 0 8px 18px -8px rgba(0,0,0,.55), inset 0 1px 1px rgba(255,255,255,.35), inset 0 -1px 1px rgba(255,255,255,.12), inset 0 0 0 .5px rgba(255,255,255,.18); }
 body.cards .group.lg .cell .tile::before { display: none; }
-.wd.lg .wd-in { clip-path: inset(0 round 38px); padding: 20px 24px; }
+.wd.lg .wd-in { clip-path: inset(0 round var(--lg-r-widget, 38px)); padding: 20px 24px; }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
@@ -200,7 +201,8 @@ const tarjetas = new ResizeObserver((es) => { for (const e of es) { clearTimeout
 function ponTarjeta(el) {
   if (!window.LiquidGlass) return;
   const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
-  if (w > 20 && h > 20) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 34, { pieza: 'tarjeta' }, 'lente')})`;
+  const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 34;
+  if (w > 20 && h > 20 && el.classList.contains('lg')) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'tarjeta' }, 'lente')})`;
 }
 function grupoLiquido() {
   let c0; try { c0 = cfg; } catch { c0 = info.config; }   // la primera vez cfg aun no existe
@@ -291,7 +293,20 @@ document.addEventListener('contextmenu', (e) => {
 const WIDGETS = ['tiempo', 'musica', 'sistema', 'notas'];
 const WNAMES = { tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
 let cfg = info.config;
-U.on('config', (c) => { cfg = c; if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(c)); });
+U.on('config', (c) => {
+  const antes = cfg.liquidGlass !== false;
+  cfg = c;
+  if (!window.LiquidGlass) return;
+  LiquidGlass.ajustar(LiquidGlass.desdeConfig(c));
+  // encender / apagar el cristal liquido al momento (panel rapido o Centro)
+  const ahora = c.liquidGlass !== false;
+  if (ahora === antes) return;
+  if (ahora) { $$('.wd').forEach(liquido); grupoLiquido(); }
+  else for (const el of $$('.wd.lg, .group.lg')) {
+    el.classList.remove('lg'); el.style.backdropFilter = '';
+    const d = el.querySelector('.wd-in'); if (d) d.style.filter = '';
+  }
+});
 if (window.LiquidGlass) LiquidGlass.alCambiar(() => grupoLiquido());
 if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(cfg));
 const wcfg = () => Object.assign({ tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
@@ -335,19 +350,22 @@ function mountWidgets() {
 function liquido(el) {
   if (!window.LiquidGlass || cfg.liquidGlass === false || document.documentElement.classList.contains('contrast')) return;
   el.classList.add('lg');
+  if (el._lgPon) { el._lgPon(); return; }
   // la animacion de entrada fija el transform; al acabar se quita para que mande el muelle
   el.addEventListener('animationend', () => { el.style.animation = 'none'; }, { once: true });
   const pon = () => {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
-    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 38, { pieza: 'widget' }, 'lente')})`;
+    const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 38;
+    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'widget' }, 'lente')})`;
     // el texto y los iconos de dentro tambien se doblan y separan en colores cerca del canto (Ajustes > Contenido)
     const dentro = el.querySelector('.wd-in');
-    dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'contenido')})` : '';
+    dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, r, {}, 'contenido')})` : '';
   };
   let espera = 0;
-  new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(pon, 160); }).observe(el); pon();
-  LiquidGlass.alCambiar(pon);
+  el._lgPon = pon;
+  new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(() => el.classList.contains('lg') && pon(), 160); }).observe(el); pon();
+  LiquidGlass.alCambiar(() => el.classList.contains('lg') && pon());
   el._mu = LiquidGlass.muelle(el, { reposo: 1, activo: 1.045, estira: 0.00035 });
 }
 // Arrastrar un widget por su titulo; se guarda donde lo sueltes.

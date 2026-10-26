@@ -143,3 +143,7 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Los filtros se rehacen 160 ms después de que la pieza deje de cambiar de tamaño (la ampliación del dock lo cambiaba en cada fotograma y se regeneraba el mapa píxel a píxel).
   - Con el efecto cromático por debajo de 0,015 se usa una sola refracción en vez de tres.
   - El vigilante de controles revisa la página como mucho una vez por fotograma.
+- Dock: mientras cambia de tamaño (arrastrarlo, ampliarlo) su cristal se rehace en cada fotograma con un mapa a media resolución (barato) y, cuando se para, a resolución completa (`seguirTamano`). El tamaño se mide con `offsetWidth` para que el rebote del muelle no cuente.
+- Forma (`lgForma`: `redondo` o `cuadrado`): la clase `html.lg-cuadrado` baja los radios (dock y bandeja 16 px, widgets 22, tarjetas 20). Las piezas leen su radio del CSS.
+- Encender y apagar: el interruptor "Cristal" del panel rápido (`data-setting="liquidGlass"`, activado por defecto) y el del Centro. El escritorio aplica o quita el cristal al momento.
+- Actualizar Windows: `irm https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/actualizar.ps1 | iex` (Antuan instalado o carpeta `UmbraOS\shell`). Cierra Antuan, copia `fuente/shell` (guarda una copia en `.anterior`) y lo vuelve a abrir con los mismos argumentos.

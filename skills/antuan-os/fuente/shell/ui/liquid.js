@@ -10,7 +10,7 @@
   const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
   const N = 128;               // muestras del perfil del bisel
   // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
-  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4, lupa: 0.12 };
+  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4, lupa: 0.12, forma: 'redondo' };
   // Ajustes del Centro (Personalizacion > Cristal liquido) -> valores del efecto. Por defecto, los de arriba.
   const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
   function desdeConfig(c = {}) {
@@ -18,7 +18,8 @@
       superficie: SUPERFICIES[c.lgSuperficie] ? c.lgSuperficie : 'squircle', bisel: num(c.lgBisel, 22),
       refraccion: num(c.lgRefraccion, 150) / 100, cromatica: num(c.lgCromatica, 6) / 100, grosor: num(c.lgGrosor, 110),
       desenfoque: num(c.lgDesenfoque, 12) / 10, especular: num(c.lgBrillo, 90) / 100, tinte: num(c.lgTinte, 16) / 100,
-      contenido: num(c.lgContenido, 40) / 100, lupa: num(c.lgLupa, 12) / 100
+      contenido: num(c.lgContenido, 40) / 100, lupa: num(c.lgLupa, 12) / 100,
+      forma: c.lgForma === 'cuadrado' ? 'cuadrado' : 'redondo'
     };
   }
 
@@ -178,15 +179,18 @@
     return b;
   }
 
-  function actualizar(c) {
-    const r0 = c.wp.getBoundingClientRect();
-    const w = Math.round(r0.width), h = Math.round(r0.height);
+  function actualizar(c, rapido = false) {
+    // offsetWidth: tamano sin el scale del muelle (el mapa es el de la pieza, no el del rebote)
+    const w = Math.round(c.wp.offsetWidth), h = Math.round(c.wp.offsetHeight);
     if (w < 8 || h < 8) return;
     const radio = Math.min(parseFloat(getComputedStyle(c.wp).borderTopLeftRadius) || 0, w / 2, h / 2);
-    const clave = `${w}x${h}r${radio}`;
-    if (clave === c.clave) return;
+    const k = rapido ? 0.5 : 1;
+    const clave = `${w}x${h}r${radio}x${k}`;
+    if (clave === c.clave || (rapido && c.clave.startsWith(`${w}x${h}r${radio}x`))) return;
     c.clave = clave;
-    const a = conPieza(AJUSTES, 'dock'), m = mapas(w, h, radio, a), q = (k) => c.filtro.querySelector(`[data-k="${k}"]`);
+    const a = conPieza(AJUSTES, 'dock'), q = (k2) => c.filtro.querySelector(`[data-k="${k2}"]`);
+    const m = mapas(Math.max(8, Math.round(w * k)), Math.max(8, Math.round(h * k)), radio * k, { ...a, bisel: a.bisel * k, grosor: a.grosor * k });
+    m.escala /= k;   // el mapa pequeno se estira a la pieza: el desplazamiento vuelve a pixeles reales
     for (const k of ['desp', 'espec']) {
       const im = q(k);
       im.setAttribute('href', m[k]); im.setAttribute('x', MARGEN); im.setAttribute('y', MARGEN);
@@ -199,6 +203,13 @@
     q('sat').setAttribute('values', a.saturacion);
     q('alfa').setAttribute('slope', a.especular);
   }
+  function seguirTamano(c) {
+    let marco = 0, espera = 0;
+    new ResizeObserver(() => {
+      if (!marco) marco = requestAnimationFrame(() => { marco = 0; actualizar(c, true); });
+      clearTimeout(espera); espera = setTimeout(() => actualizar(c), 180);
+    }).observe(c.wp);
+  }
 
   function engancha(wp) {
     if (wp._liquid) return;
@@ -209,8 +220,7 @@
     wp.appendChild(lente);
     const c = { wp, lente, filtro: crearFiltro(idF), clave: '' };
     wp._liquid = c; capas.add(c);
-    let espera = 0;
-    new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(() => actualizar(c), 160); }).observe(wp);
+    seguirTamano(c);
     actualizar(c);
   }
 
@@ -375,6 +385,7 @@
       const antes = JSON.stringify(AJUSTES);
       Object.assign(AJUSTES, nuevos);
       document.documentElement.style.setProperty('--lg-tinte', AJUSTES.tinte);
+      document.documentElement.classList.toggle('lg-cuadrado', AJUSTES.forma === 'cuadrado');
       if (JSON.stringify(AJUSTES) === antes) return;
       for (const c of capas) { c.clave = ''; actualizar(c); }
       for (const fn of oyentes) { try { fn(AJUSTES); } catch { } }

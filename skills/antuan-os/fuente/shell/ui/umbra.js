@@ -11,6 +11,7 @@ const boot = await U.init();
 // Antuan OS: lo que solo existe en Windows se oculta o se traduce (el nucleo lleva cada ajuste a su sitio)
 const LINUX = (U.plataforma || boot.plataforma) === 'linux';
 let S = boot.config;
+if (S.liquidGlass === undefined) S.liquidGlass = true;   // el cristal liquido viene activado
 let catalog = boot.catalog;
 let running = [];
 const byId = new Map(catalog.map((a) => [a.id, a]));

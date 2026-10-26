@@ -329,3 +329,7 @@ input[type=range]:active::-webkit-slider-thumb { transform: scale(1.2); }
 .toast svg.i { color: var(--accent); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(-14px) scale(.9); } }
 @keyframes toastOut { to { opacity: 0; transform: translateY(-8px) scale(.96); } }
+
+/* Cristal liquido en forma "cuadrado con esquinas redondeadas" (Centro > Cristal liquido > Forma) */
+html.lg-cuadrado #dock, html.lg-cuadrado #tray { border-radius: 16px; }
+html.lg-cuadrado #dock .dock-item .tile, html.lg-cuadrado #dock .tile { border-radius: 11px; }
