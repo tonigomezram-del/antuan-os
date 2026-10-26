@@ -139,7 +139,78 @@
     actualizar(c);
   }
 
+  // Filtro para un tamano fijo (lentes de sliders e interruptores con backdrop-filter): se cachea por tamano
+  const fijos = new Map();
+  function filtroFijo(w, h, r, extra = {}) {
+    const a = { ...AJUSTES, ...extra }, clave = [w, h, r, JSON.stringify(extra)].join('|');
+    if (fijos.has(clave)) return fijos.get(clave);
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
+    q('esc-r').setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
+    q('esc-g').setAttribute('scale', m.escala.toFixed(2));
+    q('esc-bl').setAttribute('scale', (m.escala * (1 - a.cromatica)).toFixed(2));
+    q('blur').setAttribute('stdDeviation', a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
+    fijos.set(clave, idF);
+    return idF;
+  }
+
+  /* ---------- Controles liquidos: sliders e interruptores como en iOS 26 ---------- */
+  // Slider: la bolita blanca (pildora) se convierte al pulsar en una lente de cristal que refracta la barra.
+  const TW = 30, TH = 19;            // pildora en reposo; pulsada crece x1.6
+  function sliderLiquido(inp) {
+    if (inp._lg || inp.closest('.lg-range')) return;
+    inp._lg = true;
+    const caja = document.createElement('span'); caja.className = 'lg-range';
+    inp.parentNode.insertBefore(caja, inp); caja.appendChild(inp);
+    const bola = document.createElement('span'); bola.className = 'lg-thumb'; caja.appendChild(bola);
+    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 12, grosor: 40, cromatica: 0.18, desenfoque: 0, especular: 1, saturacion: 1.6 });
+    bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    const sitio = () => {
+      const min = +inp.min || 0, max = inp.max === '' ? 100 : +inp.max, v = (+inp.value - min) / ((max - min) || 1);
+      const w = inp.clientWidth; bola.style.left = (TW / 2 + v * Math.max(0, w - TW)) + 'px';
+    };
+    const on = () => { caja.classList.add('activo'); sitio(); };
+    const off = () => caja.classList.remove('activo');
+    inp.addEventListener('input', sitio);
+    inp.addEventListener('pointerdown', on);
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
+    new ResizeObserver(sitio).observe(inp);
+    // los valores que se ponen desde el codigo (volumen, brillo...) tambien mueven la bola
+    const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    Object.defineProperty(inp, 'value', { get() { return d.get.call(this); }, set(v) { d.set.call(this, v); sitio(); } });
+    sitio();
+  }
+  // Interruptor: la bola crece al pulsar y se vuelve cristal; al soltar salta con muelle al otro lado
+  function interruptorLiquido(sw) {
+    if (sw._lg) return; sw._lg = true;
+    const id = filtroFijo(30, 24, 12, { bisel: 9, grosor: 34, cromatica: 0.2, desenfoque: 0, especular: 1, saturacion: 1.7 });
+    sw.style.setProperty('--lg-filtro', `url(#${id})`);
+  }
+  // Pulsar un cristal (dock, bandeja): se aplasta un poco hacia el dedo y vuelve con rebote, como gelatina
+  function gelatina(el) {
+    if (el._lgGel) return; el._lgGel = true;
+    el.addEventListener('pointerdown', () => {
+      if (document.documentElement.classList.contains('reduce-motion')) return;
+      // propiedad "scale" aparte: no pisa el transform con el que el dock se coloca en su borde
+      el.animate([{ scale: '1' }, { scale: '1.025 0.97', offset: 0.35 }, { scale: '0.995 1.008', offset: 0.7 }, { scale: '1' }],
+        { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' });
+    });
+  }
+  function controles(raiz = document) {
+    raiz.querySelectorAll('input[type=range]').forEach(sliderLiquido);
+    raiz.querySelectorAll('.switch').forEach(interruptorLiquido);
+    raiz.querySelectorAll('.glass.liquid, #tray').forEach(gelatina);
+  }
+  let vigia = null;
+  function vigilarControles() {
+    controles();
+    if (vigia) return;
+    vigia = new MutationObserver(() => controles());
+    vigia.observe(document.body, { childList: true, subtree: true });
+  }
+
   window.LiquidGlass = {
+    filtroFijo, controles: vigilarControles,
     ajustes: AJUSTES,
     iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
     ajustar(nuevos) { Object.assign(AJUSTES, nuevos); for (const c of capas) { c.clave = ''; actualizar(c); } },

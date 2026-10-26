@@ -98,3 +98,8 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
 ## Liquid Glass tipo iOS (2026-10-26)
 
 `shell/ui/liquid.js` (basado en el artículo de kube.io): para cada capa `.wp` (la copia del fondo de pantalla que hay detrás del dock y de la bandeja), crea un mapa de desplazamiento con un bisel "squircle" convexo (refracción de Snell, n=1,5) y un mapa especular del canto. Un filtro SVG desplaza el fondo con aberración cromática (R, G y B con fuerzas ±10 %) y suma el brillo. Con alto contraste se apaga; `S.liquidGlass === false` también lo apaga. Los ajustes van en `LiquidGlass.ajustar({ bisel, grosor, refraccion, cromatica, desenfoque, especular, saturacion })`. Solo refracta el fondo de pantalla, no las ventanas que haya detrás (la ventana del dock es transparente y no las ve).
+- Controles líquidos (`LiquidGlass.controles()` + `ui/liquid.css`, en el panel rápido y el Centro):
+  - Cada `input[type=range]` se envuelve en `.lg-range` con una bola `.lg-thumb` de 48x30 que en reposo se ve a escala 0,625 (píldora blanca). Al pulsar crece con muelle y pasa a `backdrop-filter: url(#filtro)` (lente que refracta la barra).
+  - Los `.switch` hacen lo mismo con su `::after`.
+  - El dock y la bandeja se aplastan como gelatina al pulsarlos (animación de la propiedad `scale`).
+  - Prueba visual: `Opensource ai/prueba-lg/` con el servidor `prueba-lg` de `.claude/launch.json`.
