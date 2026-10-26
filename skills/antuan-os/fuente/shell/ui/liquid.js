@@ -10,7 +10,7 @@
   const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
   const N = 128;               // muestras del perfil del bisel
   // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
-  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4 };
+  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4, lupa: 0.12 };
   // Ajustes del Centro (Personalizacion > Cristal liquido) -> valores del efecto. Por defecto, los de arriba.
   const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
   function desdeConfig(c = {}) {
@@ -18,7 +18,7 @@
       superficie: SUPERFICIES[c.lgSuperficie] ? c.lgSuperficie : 'squircle', bisel: num(c.lgBisel, 22),
       refraccion: num(c.lgRefraccion, 150) / 100, cromatica: num(c.lgCromatica, 6) / 100, grosor: num(c.lgGrosor, 110),
       desenfoque: num(c.lgDesenfoque, 12) / 10, especular: num(c.lgBrillo, 90) / 100, tinte: num(c.lgTinte, 16) / 100,
-      contenido: num(c.lgContenido, 40) / 100
+      contenido: num(c.lgContenido, 40) / 100, lupa: num(c.lgLupa, 12) / 100
     };
   }
 
@@ -76,17 +76,29 @@
     const gd = cd.getContext('2d'), gs = cs.getContext('2d');
     const id = gd.createImageData(w, h), is = gs.createImageData(w, h);
     const L = { x: -0.6, y: -0.8 };             // luz arriba a la izquierda, como en iOS
+    // Desplazamiento en pixeles de cada punto: la curva del borde (Snell) mas el aumento de lupa de todo el
+    // cristal (lo de detras se ve mas grande y curvado por toda la superficie, como en la demo). El contenido
+    // no lleva lupa (el texto no se mueve de sitio).
+    const lupa = a.lupa > 0 && a.escalar !== false ? 1 - 1 / (1 + a.lupa) : 0;
+    const borde = max * a.refraccion / 2, cx = w / 2, cy = h / 2;
+    const des = new Float32Array(w * h * 2);
+    let mayor = 0.0001;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       // el campo se calcula con esquinas al menos tan redondas como el borde curvado: sin pliegues en diagonal
-      const o = (y * w + x) * 4, c = campo(x + 0.5, y + 0.5, w, h, Math.min(Math.max(r, bisel), w / 2, h / 2));
+      const c = campo(x + 0.5, y + 0.5, w, h, Math.min(Math.max(r, bisel), w / 2, h / 2));
       if (c.d < 0) c.d = 0;   // las puntas de la esquina real, como el canto
-      let dx = 0, dy = 0;
-      if (c.d >= 0 && c.d < bisel) {
-        const m = tabla[Math.round((c.d / bisel) * N)];
+      let dx = -(x + 0.5 - cx) * lupa, dy = -(y + 0.5 - cy) * lupa;
+      if (c.d < bisel) {
         // hacia dentro: la lente amplia lo que tiene debajo, como en iOS (y en la demo con backdrop-filter)
-        dx = -c.nx * m; dy = -c.ny * m;
+        const m = tabla[Math.round((c.d / bisel) * N)] * borde;
+        dx -= c.nx * m; dy -= c.ny * m;
       }
-      id.data[o] = 128 + dx * 127; id.data[o + 1] = 128 + dy * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
+      const k = (y * w + x) * 2; des[k] = dx; des[k + 1] = dy;
+      mayor = Math.max(mayor, Math.abs(dx), Math.abs(dy));
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4, k = (y * w + x) * 2;
+      id.data[o] = 128 + (des[k] / mayor) * 127; id.data[o + 1] = 128 + (des[k + 1] / mayor) * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
       // brillo especular como en iOS: una linea fina y nitida en el canto, fuerte donde la normal mira a la
       // luz (arriba a la izquierda) y a su opuesto (abajo a la derecha), casi nada en los lados; y un halo
       // muy corto (4 px) solo en esas dos zonas
@@ -100,7 +112,7 @@
       }
     }
     gd.putImageData(id, 0, 0); gs.putImageData(is, 0, 0);
-    return { desp: cd.toDataURL(), espec: cs.toDataURL(), escala: max * a.refraccion };
+    return { desp: cd.toDataURL(), espec: cs.toDataURL(), escala: mayor * 2 };
   }
 
   let defs = null, cuenta = 0;

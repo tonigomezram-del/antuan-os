@@ -410,6 +410,7 @@ const SECTIONS = {
           <div class="lg-vista" id="lgVista"><div class="lg-vista-fondo"></div><div class="lg-vista-lente" id="lgLente"><div class="in"><b>22°</b><span>Arrástrame</span></div></div></div>
           <div class="row"><div class="lbl"><b>Forma de la curva</b><span>Cómo se dobla lo de fuera en el borde</span></div>${seg('lgSuperficie', [['squircle', 'Squircle'], ['circulo', 'Círculo'], ['concavo', 'Cóncavo'], ['labio', 'Labio']], C.lgSuperficie || 'squircle')}</div>
           ${[['lgBisel', 'Ancho del borde', 'Cuánta parte del cristal está curvada', 5, 70, 22],
+              ['lgLupa', 'Aumento (lupa)', 'Lo de detrás se ve más grande y curvado en todo el cristal', 0, 50, 12],
               ['lgRefraccion', 'Refracción', 'Cuánto dobla lo que hay detrás', 0, 300, 150],
               ['lgCromatica', 'Efecto cromático', 'Separación de colores (arcoíris) en el borde', 0, 30, 6],
               ['lgGrosor', 'Grosor del cristal', 'Más grueso, más se curva el borde', 30, 200, 110],
@@ -440,7 +441,7 @@ const SECTIONS = {
           return;
         }
         if (e.target.closest('[data-lg-reset]')) {
-          const def = { lgSuperficie: 'squircle', lgBisel: 22, lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
+          const def = { lgSuperficie: 'squircle', lgBisel: 22, lgLupa: 12, lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
           setC(def); for (const [k, v] of Object.entries(def)) { const r = $(`#pane [data-k="${k}"]`); if (r) { r.value = v; paint(r); } }
           $$('[data-seg="lgSuperficie"]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === 'squircle'));
           toast('Cristal líquido de fábrica'); return;

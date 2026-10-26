@@ -125,3 +125,4 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Los controles y el filtro del contenido no escalan, para que el texto se lea.
   - La curva se calcula con esquinas al menos tan redondas como el bisel, para que no salgan pliegues en diagonal. El brillo usa la esquina real.
   - El contenido doblado se recorta con `clip-path: inset(0 round 22px)`.
+- Aumento tipo lupa (`lgLupa`, 0–50 %, por defecto 12 %): a la curva del borde se suma un aumento centrado en todo el cristal. Así lo de detrás se ve más grande y curvado por toda la superficie, y no solo en el borde (con el centro plano, Toni no veía que se deformara lo de fuera). El mapa se calcula en píxeles y luego se normaliza (`escala = 2 × desplazamiento máximo`). El contenido y los controles no llevan lupa.
