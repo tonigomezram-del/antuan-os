@@ -94,3 +94,7 @@ Necesita WSL con Debian (Toni debe ejecutar como administrador `wsl --install -d
 4. Crea con `bcdedit` una entrada "Antuan OS" y la pone solo para el siguiente arranque (`bootsequence`), quita la hibernación y reinicia.
 
 Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y el instalador puede "Borrar disco". Para eso el initrd necesita `ntfs3`: va en `usr/share/initramfs-tools/modules.d/antuan-ntfs`, y `remendar-iso.sh` con `INITRD=1` regenera el initrd y lo cambia también en la ISO. Probado en VM con `disco-sin-pendrive.sh`, que crea un disco igual al de un PC con Windows: arranca hasta el escritorio con el instalador.
+
+## Liquid Glass tipo iOS (2026-10-26)
+
+`shell/ui/liquid.js` (basado en el artículo de kube.io): para cada capa `.wp` (la copia del fondo de pantalla que hay detrás del dock y de la bandeja), crea un mapa de desplazamiento con un bisel "squircle" convexo (refracción de Snell, n=1,5) y un mapa especular del canto. Un filtro SVG desplaza el fondo con aberración cromática (R, G y B con fuerzas ±10 %) y suma el brillo. Con alto contraste se apaga; `S.liquidGlass === false` también lo apaga. Los ajustes van en `LiquidGlass.ajustar({ bisel, grosor, refraccion, cromatica, desenfoque, especular, saturacion })`. Solo refracta el fondo de pantalla, no las ventanas que haya detrás (la ventana del dock es transparente y no las ve).

@@ -27,6 +27,8 @@ function apply() {
   root.style.setProperty('--accent-rgb', hexToRgb(S.accent));
   if (!S.contrast) root.style.setProperty('--glass-a', (S.glass / 100).toFixed(2)); else root.style.removeProperty('--glass-a');
   root.style.setProperty('--dock-size', S.dockSize + 'px');
+  // Liquid Glass tipo iOS en el dock y la bandeja (con alto contraste se queda el cristal opaco)
+  if (window.LiquidGlass) { if (!S.contrast && S.liquidGlass !== false) LiquidGlass.iniciar(); else LiquidGlass.apagar(); }
   $$('[data-setting]').forEach((el) => {
     const v = S[el.dataset.setting];
     if (el.type === 'range') { el.value = v; paintRange(el); }
