@@ -93,6 +93,8 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 /* El contenido va en .wd-in, que mide lo mismo que el widget, para que la lente tambien lo doble */
 .wd { padding: 0; }
 .wd-in { padding: 16px 18px; border-radius: inherit; }
+/* lo que el cristal dobla del contenido no se sale de la forma redondeada */
+.wd.lg .wd-in { clip-path: inset(0 round 22px); }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }

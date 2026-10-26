@@ -43,6 +43,6 @@ html:not(.lg) .lg-knob { display: none; }
   display: grid; place-content: center; text-align: center; color: #fff; background: rgba(255,255,255,.015);
   box-shadow: var(--lg-dx, 0px) calc(4px + var(--lg-dy, 0px)) 12px rgba(0,0,0,.18), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07);
 }
-.lg-vista-lente .in { position: absolute; inset: 0; display: grid; place-content: center; border-radius: inherit; filter: var(--lg-cont, none); }
+.lg-vista-lente .in { clip-path: inset(0 round 55px); position: absolute; inset: 0; display: grid; place-content: center; border-radius: inherit; filter: var(--lg-cont, none); }
 .lg-vista-lente b { font: 300 30px/1 "Segoe UI Variable Display", "Segoe UI", sans-serif; }
 .lg-vista-lente span { font-size: 11px; opacity: .8; }

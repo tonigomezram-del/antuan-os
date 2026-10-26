@@ -121,3 +121,7 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
 - Forma de la curva (`lgSuperficie`: squircle, circulo, concavo o labio, como "Surface Type" de la demo) y ancho del borde (`lgBisel`, 5–70). En el Centro hay una vista previa con una lente que se arrastra sobre rayas y texto (`vistaLiquida()` en centro.js), para ver qué hace cada ajuste.
 - **Ojo al editar con `String.replace` de JS:** en el texto de reemplazo, `$$` se convierte en `$`. Así se rompió el Centro (`$$('#pane input')` pasó a ser `$(...)` y daba un error que cortaba todos los ajustes). Usa una función como reemplazo o el editor.
 - Prueba sin tocar la pantalla de Toni: `prueba-lg/app` (Electron oculto). `orden.json` lleva la URL, el prefijo y los pasos; cada paso ejecuta JS y guarda una captura con `capturePage`. La página `prueba-lg/centro.html` es el Centro con un `window.umbra` simulado (se sirve con el servidor `prueba-lg`).
+- El cristal escala con su tamaño. Los ajustes valen para una pieza de 100 px de lado corto: el bisel y el grosor se multiplican por `lado corto / 100` (entre 0,6 y 3). Así un widget grande es una lente gruesa y no "una pequeña estirada".
+  - Los controles y el filtro del contenido no escalan, para que el texto se lea.
+  - La curva se calcula con esquinas al menos tan redondas como el bisel, para que no salgan pliegues en diagonal. El brillo usa la esquina real.
+  - El contenido doblado se recorta con `clip-path: inset(0 round 22px)`.

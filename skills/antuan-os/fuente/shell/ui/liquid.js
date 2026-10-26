@@ -65,16 +65,21 @@
   }
 
   function mapas(w, h, r, a) {
-    const bisel = Math.max(4, Math.min(a.bisel, w / 2 - 1, h / 2 - 1));
-    // el grosor de la demo (150) es para una lente de 140 px de alto: en piezas mas bajas (el dock) se reduce igual
-    const { tabla, max } = perfil(bisel, a.grosor * Math.min(1, Math.min(w, h) / 140), a.superficie);
+    // El cristal escala con su tamano: los ajustes son para una pieza de 100 px de lado corto, y una mas grande
+    // (un widget) tiene el borde curvado y el grosor proporcionalmente mayores; no es uno pequeno estirado.
+    // Los controles (bolitas de sliders e interruptores) llevan sus medidas exactas (escalar: false).
+    const f = a.escalar === false ? 1 : Math.min(3, Math.max(0.6, Math.min(w, h) / 100));
+    const bisel = Math.max(4, Math.min(a.bisel * f, w / 2 - 1, h / 2 - 1));
+    const { tabla, max } = perfil(bisel, a.grosor * f, a.superficie);
     const cd = document.createElement('canvas'), cs = document.createElement('canvas');
     cd.width = cs.width = w; cd.height = cs.height = h;
     const gd = cd.getContext('2d'), gs = cs.getContext('2d');
     const id = gd.createImageData(w, h), is = gs.createImageData(w, h);
     const L = { x: -0.6, y: -0.8 };             // luz arriba a la izquierda, como en iOS
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const o = (y * w + x) * 4, c = campo(x + 0.5, y + 0.5, w, h, r);
+      // el campo se calcula con esquinas al menos tan redondas como el borde curvado: sin pliegues en diagonal
+      const o = (y * w + x) * 4, c = campo(x + 0.5, y + 0.5, w, h, Math.min(Math.max(r, bisel), w / 2, h / 2));
+      if (c.d < 0) c.d = 0;   // las puntas de la esquina real, como el canto
       let dx = 0, dy = 0;
       if (c.d >= 0 && c.d < bisel) {
         const m = tabla[Math.round((c.d / bisel) * N)];
@@ -85,10 +90,11 @@
       // brillo especular como en iOS: una linea fina y nitida en el canto, fuerte donde la normal mira a la
       // luz (arriba a la izquierda) y a su opuesto (abajo a la derecha), casi nada en los lados; y un halo
       // muy corto (4 px) solo en esas dos zonas
-      if (c.d >= 0 && c.d < 4) {
-        const cara = Math.abs(c.nx * L.x + c.ny * L.y), foco = Math.pow(cara, 3);
-        const linea = c.d < 1.6 ? (0.1 + 0.9 * foco) * (1 - c.d / 1.6) : 0;
-        const halo = 0.22 * foco * Math.pow(1 - c.d / 4, 2);
+      const e = campo(x + 0.5, y + 0.5, w, h, r);   // el brillo sigue la esquina real
+      if (e.d >= 0 && e.d < 4) {
+        const cara = Math.abs(e.nx * L.x + e.ny * L.y), foco = Math.pow(cara, 3);
+        const linea = e.d < 1.6 ? (0.1 + 0.9 * foco) * (1 - e.d / 1.6) : 0;
+        const halo = 0.22 * foco * Math.pow(1 - e.d / 4, 2);
         const al = Math.min(1, linea + halo);
         is.data[o] = is.data[o + 1] = is.data[o + 2] = 255; is.data[o + 3] = al * 255;
       }
@@ -180,7 +186,8 @@
   function filtroFijo(w, h, r, extra = {}, modo = 'control') {
     const a = { ...AJUSTES, ...extra }, clave = [w, h, r, modo, JSON.stringify(a)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
-    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    // solo la lente escala con el tamano; los controles y el contenido mantienen un borde fino (el texto se lee)
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
     const e = m.escala * (modo === 'contenido' ? a.contenido : 1);
     q('esc-r').setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
