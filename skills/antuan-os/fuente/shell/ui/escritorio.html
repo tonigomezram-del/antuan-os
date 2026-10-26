@@ -94,7 +94,8 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 .wd { padding: 0; }
 .wd-in { padding: 16px 18px; border-radius: inherit; }
 /* lo que el cristal dobla del contenido no se sale de la forma redondeada */
-.wd.lg .wd-in { clip-path: inset(0 round 22px); }
+.wd.lg { border-radius: 38px; }
+.wd.lg .wd-in { clip-path: inset(0 round 38px); padding: 20px 24px; }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
@@ -315,10 +316,10 @@ function liquido(el) {
   const pon = () => {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
-    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 22, {}, 'lente')})`;
+    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'lente')})`;
     // el texto y los iconos de dentro tambien se doblan y separan en colores cerca del canto (Ajustes > Contenido)
     const dentro = el.querySelector('.wd-in');
-    dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 22, {}, 'contenido')})` : '';
+    dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, 38, {}, 'contenido')})` : '';
   };
   new ResizeObserver(pon).observe(el); pon();
   LiquidGlass.alCambiar(pon);
