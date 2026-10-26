@@ -83,11 +83,19 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 .wd { position: fixed; width: 300px; padding: 16px 18px; border-radius: 22px; z-index: 5;
   background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.015) 60%), rgba(14,16,22,.38);
   backdrop-filter: blur(26px) saturate(160%); box-shadow: 0 20px 50px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
-  animation: fadeUp .7s var(--ease) both; transition: box-shadow .2s, transform .25s var(--spring); }
+  animation: fadeUp .7s var(--ease) both; transition: box-shadow .2s; }
+/* Liquid Glass: el widget refracta el fondo y los iconos que tiene detras (filtro SVG de liquid.js) */
+.wd.lg { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,.16);
+  box-shadow: var(--lg-dx, 0px) calc(18px + var(--lg-dy, 0px)) 44px -18px rgba(0,0,0,.6),
+    inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); will-change: transform; }
+.wd.lg .body, .wd.lg h4 { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
 .wd::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.04) 45%, rgba(255,255,255,.1));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; }
-.wd.drag { transform: scale(1.03); box-shadow: 0 30px 70px -20px rgba(0,0,0,.85); z-index: 9; transition: none; }
+.wd.drag { z-index: 9; }
+.wd.drag:not(.lg) { transform: scale(1.03); box-shadow: 0 30px 70px -20px rgba(0,0,0,.85); }
+/* Tarjetas de grupos: el mismo cristal en solido, con sombras interiores (al apretar rebotan, liquid.js) */
+body.cards .group { box-shadow: 0 22px 50px -22px rgba(0,0,0,.75), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07); }
 .wd h4 { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: rgba(233,235,241,.5); display: flex; gap: 8px; align-items: center; cursor: grab; }
 .wd h4 .x { margin-left: auto; opacity: 0; transition: opacity .15s; border: 0; background: none; color: inherit; padding: 0; }
 .wd:hover h4 .x { opacity: .7; }
@@ -121,6 +129,7 @@ body.sz-s { --tile: 46px; --cellw: 78px; } body.sz-m { --tile: 58px; --cellw: 92
 <div id="groups"></div>
 <div id="menu" class="menu" role="menu"></div>
 <script src="icons.js"></script>
+<script src="liquid.js"></script>
 <script>
 (async () => {
 const U = window.umbra, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -285,16 +294,34 @@ function mountWidgets() {
     if (c.x != null) { el.style.left = c.x + 'px'; el.style.top = c.y + 'px'; el.dataset.custom = '1'; }
     RENDER[id]($('.body', el));
     ro.observe(el);
+    liquido(el);
   });
   layoutWidgets();
+}
+// Liquid Glass en los widgets: la refraccion se rehace a la medida del widget cuando cambia de tamano,
+// y el muelle (crecer al cogerlo, estirarse al moverlo, rebotar al soltarlo) mueve tambien su contenido.
+function liquido(el) {
+  if (!window.LiquidGlass || cfg.liquidGlass === false || document.documentElement.classList.contains('contrast')) return;
+  el.classList.add('lg');
+  // la animacion de entrada fija el transform; al acabar se quita para que mande el muelle
+  el.addEventListener('animationend', () => { el.style.animation = 'none'; }, { once: true });
+  const pon = () => {
+    const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+    if (w < 20 || h < 20) return;
+    const id = LiquidGlass.filtroFijo(w, h, 22, { bisel: 22, grosor: 110, desenfoque: 1.2, cromatica: 0.06, especular: 0.9, saturacion: 1.3 }, 'lente');
+    el.style.backdropFilter = `url(#${id})`;
+  };
+  new ResizeObserver(pon).observe(el); pon();
+  el._mu = LiquidGlass.muelle(el, { reposo: 1, activo: 1.045, estira: 0.00035 });
 }
 // Arrastrar un widget por su titulo; se guarda donde lo sueltes.
 document.addEventListener('pointerdown', (e) => {
   const h = e.target.closest('.wd h4'); if (!h || e.target.closest('.x')) return;
   const el = h.parentElement, r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
   el.classList.add('drag'); el.style.right = 'auto';
-  const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px'; };
-  const up = () => { el.classList.remove('drag'); el.dataset.custom = '1'; removeEventListener('pointermove', mv); removeEventListener('pointerup', up); saveW(el.dataset.w, { x: parseInt(el.style.left), y: parseInt(el.style.top) }); layoutWidgets(); };
+  if (el._mu) el._mu.tocar();
+  const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px'; if (el._mu) el._mu.mover(); };
+  const up = () => { el.classList.remove('drag'); if (el._mu) el._mu.soltar(); el.dataset.custom = '1'; removeEventListener('pointermove', mv); removeEventListener('pointerup', up); saveW(el.dataset.w, { x: parseInt(el.style.left), y: parseInt(el.style.top) }); layoutWidgets(); };
   addEventListener('pointermove', mv); addEventListener('pointerup', up);
 });
 document.addEventListener('click', (e) => { const x = e.target.closest('.wd .x'); if (x) { const id = x.closest('.wd').dataset.w; saveW(id, { on: false }); x.closest('.wd').remove(); } });
@@ -360,6 +387,7 @@ const RENDER = {
   }
 };
 mountWidgets();
+if (window.LiquidGlass) LiquidGlass.controles(); // tarjetas que rebotan al apretarlas
 
 /* Reloj */
 function clock() {

@@ -259,6 +259,7 @@ addEventListener('pointermove', (e) => {
   $$('.edge-hint').forEach((h) => h.classList.toggle('on', h.dataset.e === e2));
   dock.classList.toggle('vertical', e2 === 'left' || e2 === 'right');
   updateWp();
+  if (dock._lgGel) dock._lgGel.mover(); // liquid glass: el dock se estira con la velocidad del arrastre
 });
 addEventListener('pointerup', () => {
   if (!drag) return;

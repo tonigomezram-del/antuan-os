@@ -176,9 +176,15 @@
     const est = o.estira ?? 0.00045;
     const m = { s: o.reposo, vs: 0, S: o.reposo, x: o.x || 0, vx: 0, X: o.x || 0, ex: 0, vex: 0, ey: 0, vey: 0, EX: 0, EY: 0, px: null, py: null, t: 0, vivo: false, agarrado: false };
     function pinta() {
-      const mag = Math.min(0.22, Math.hypot(m.ex, m.ey)), ang = Math.atan2(m.ey, m.ex);
-      const sx = m.s * (1 + mag), sy = m.s * (1 - mag * 0.55);
-      el.style.transform = `translateX(${m.x.toFixed(2)}px) rotate(${ang.toFixed(4)}rad) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) rotate(${(-ang).toFixed(4)}rad)`;
+      if (o.prop === 'scale') {
+        // estiramiento en los ejes (la propiedad scale no admite girar): ancho con la velocidad x, alto con la y
+        const ax = Math.min(0.16, Math.abs(m.ex)), ay = Math.min(0.16, Math.abs(m.ey));
+        el.style.scale = `${(m.s * (1 + ax - ay * 0.5)).toFixed(4)} ${(m.s * (1 + ay - ax * 0.5)).toFixed(4)}`;
+      } else {
+        const mag = Math.min(0.22, Math.hypot(m.ex, m.ey)), ang = Math.atan2(m.ey, m.ex);
+        const sx = m.s * (1 + mag), sy = m.s * (1 - mag * 0.55);
+        el.style.transform = `translateX(${m.x.toFixed(2)}px) rotate(${ang.toFixed(4)}rad) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) rotate(${(-ang).toFixed(4)}rad)`;
+      }
       el.style.setProperty('--lg-dx', (-m.ex * 22).toFixed(2) + 'px');
       el.style.setProperty('--lg-dy', (-m.ey * 22).toFixed(2) + 'px');
       el.style.setProperty('--lg-on', ((m.s - o.reposo) / ((o.activo - o.reposo) || 1)).toFixed(3));
@@ -253,20 +259,32 @@
     sw.addEventListener('pointerdown', () => { sw.classList.add('lg-pulsado'); mu.tocar(); });
     window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
   }
-  // Pulsar un cristal (dock, bandeja): se aplasta un poco y vuelve con rebote, como gelatina
-  function gelatina(el) {
-    if (el._lgGel) return; el._lgGel = true;
-    el.addEventListener('pointerdown', () => {
-      if (reducido()) return;
-      // propiedad "scale" aparte: no pisa el transform con el que el dock se coloca en su borde
-      el.animate([{ scale: '1' }, { scale: '1.025 0.97', offset: 0.35 }, { scale: '0.995 1.008', offset: 0.7 }, { scale: '1' }],
-        { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' });
+  // Pulsar un cristal (dock, bandeja, widgets): crece mientras se aprieta y rebota al soltar; si se arrastra,
+  // se estira con la velocidad. Devuelve el muelle para que quien mueva la pieza llame a mover().
+  function gelatina(el, o = {}) {
+    if (el._lgGel) return el._lgGel;
+    const mu = muelle(el, { reposo: 1, activo: o.activo ?? 1.035, estira: o.estira ?? 0.0003, prop: o.prop ?? 'scale' });
+    el._lgGel = mu;
+    let apretado = false;
+    el.addEventListener('pointerdown', (e) => { if (e.button !== 0 || (o.soloFondo && e.target.closest('button, input, a, [role=button], .cell'))) return; apretado = true; mu.tocar(); });
+    const off = () => { if (!apretado) return; apretado = false; mu.soltar(); };
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
+    return mu;
+  }
+  // Piezas solidas (paneles, tarjetas): mismo cristal pero opaco; al apretar su fondo hacen el rebote corto
+  function solido(el) {
+    if (el._lgSol) return; el._lgSol = true;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || reducido() || e.target.closest('button, input, a, select, textarea, [role=button], .cell, .dock-item')) return;
+      el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.012, 0.988)', offset: 0.3 }, { transform: 'scale(0.997, 1.004)', offset: 0.65 }, { transform: 'scale(1)' }],
+        { duration: 480, easing: 'cubic-bezier(.22,1,.36,1)', composite: 'add' });
     });
   }
   function controles(raiz = document) {
     raiz.querySelectorAll('input[type=range]').forEach(sliderLiquido);
     raiz.querySelectorAll('.switch').forEach(interruptorLiquido);
-    raiz.querySelectorAll('.glass.liquid, #tray').forEach(gelatina);
+    raiz.querySelectorAll('.glass.liquid, #tray').forEach((el) => gelatina(el, { activo: el.id === 'dock' ? 1.025 : 1.035 }));
+    raiz.querySelectorAll('.panel.glass, .group').forEach(solido);
   }
   let vigia = null;
   function vigilarControles() {
@@ -277,7 +295,7 @@
   }
 
   window.LiquidGlass = {
-    filtroFijo, muelle, controles: vigilarControles,
+    filtroFijo, muelle, gelatina, controles: vigilarControles,
     ajustes: AJUSTES,
     iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
     ajustar(nuevos) { Object.assign(AJUSTES, nuevos); for (const c of capas) { c.clave = ''; actualizar(c); } },

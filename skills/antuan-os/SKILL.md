@@ -108,3 +108,9 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Al tocar crece con rebote. Al moverse se estira en la dirección del movimiento según la velocidad medida en pantalla (máximo ×1,22), y la sombra se queda atrás (`--lg-dx`/`--lg-dy`). Al soltar vuelve oscilando.
   - La usan la bola de los sliders (0,625 → 1) y la de los interruptores (`.lg-knob`, 0,667 → 1; salta 14 px con muelle al cambiar `aria-checked`).
   - `LiquidGlass.filtroFijo(w, h, r, ajustes, 'lente')` da el filtro para usar con `backdrop-filter` en una lente suelta, como en `prueba-lg/comparar.html`.
+- Escritorio (`escritorio.html`):
+  - Los widgets (Tiempo, Música, Sistema, Notas) llevan `backdrop-filter: url(#filtro a su medida)`. Están en la misma ventana que el fondo y los iconos, así que los refractan de verdad.
+  - Al arrastrarlos por el título usan `LiquidGlass.muelle` (crecen a 1,045, se estiran con la velocidad y rebotan), y el texto se deforma con ellos.
+  - La animación de entrada `fadeUp` se quita al terminar (`animationend`), porque si no, fija el transform.
+  - Las tarjetas de grupos son "cristal sólido": rebotan al apretar su fondo (`solido()`), igual que los paneles `.panel.glass`.
+- Dock: `gelatina(dock)` usa el muelle con la propiedad `scale` (el transform ya lo usa para colocarse). Crece al apretar y, al arrastrarlo entre bordes, se estira en el eje del movimiento (`dock._lgGel.mover()` en el pointermove de `umbra.js`).
