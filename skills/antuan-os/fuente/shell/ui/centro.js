@@ -428,7 +428,7 @@ const SECTIONS = {
           const cur = Object.assign({ tl: 'mission', tr: 'none', bl: 'none', br: 'desktop' }, C.corners || {})[k];
           return `<div class="row"><div class="lbl"><b>${n}</b></div><select data-corner="${k}">${[['none', 'Nada'], ['mission', 'Mission Control'], ['launcher', 'Inicio'], ['spotlight', 'Buscar'], ['desktop', 'Mostrar escritorio'], ['lock', 'Bloquear']].map(([v, t]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
         }).join('')}</div>`);
-      $('#pane input[type=range]').forEach(paint);
+      $$('#pane input[type=range]').forEach(paint);
       vistaLiquida();
       pane.addEventListener('click', async (e) => {
         const th = e.target.closest('[data-theme]');
@@ -442,7 +442,7 @@ const SECTIONS = {
         if (e.target.closest('[data-lg-reset]')) {
           const def = { lgSuperficie: 'squircle', lgBisel: 22, lgRefraccion: 150, lgCromatica: 6, lgGrosor: 110, lgDesenfoque: 12, lgBrillo: 90, lgTinte: 16, lgContenido: 40 };
           setC(def); for (const [k, v] of Object.entries(def)) { const r = $(`#pane [data-k="${k}"]`); if (r) { r.value = v; paint(r); } }
-          $('[data-seg="lgSuperficie"]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === 'squircle'));
+          $$('[data-seg="lgSuperficie"]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === 'squircle'));
           toast('Cristal líquido de fábrica'); return;
         }
         const sg = e.target.closest('[data-seg]');
