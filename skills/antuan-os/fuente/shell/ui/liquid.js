@@ -249,48 +249,61 @@
   const reducido = () => document.documentElement.classList.contains('reduce-motion');
   function muelle(el, o) {
     const est = o.estira ?? 0.00045;
-    const m = { s: o.reposo, vs: 0, S: o.reposo, x: o.x || 0, vx: 0, X: o.x || 0, ex: 0, vex: 0, ey: 0, vey: 0, EX: 0, EY: 0, px: null, py: null, t: 0, vivo: false, agarrado: false };
+    const m = { s: o.reposo, vs: 0, S: o.reposo, x: o.x || 0, vx: 0, X: o.x || 0, ex: 0, vex: 0, ey: 0, vey: 0, EX: 0, EY: 0, px: null, py: null, t: 0, vivo: false, agarrado: false, puntero: null };
     function pinta() {
-      if (o.prop === 'scale') {
-        // estiramiento en los ejes (la propiedad scale no admite girar): ancho con la velocidad x, alto con la y
-        const ax = Math.min(0.16, Math.abs(m.ex)), ay = Math.min(0.16, Math.abs(m.ey));
-        el.style.scale = `${(m.s * (1 + ax - ay * 0.5)).toFixed(4)} ${(m.s * (1 + ay - ax * 0.5)).toFixed(4)}`;
-      } else {
-        const mag = Math.min(0.22, Math.hypot(m.ex, m.ey)), ang = Math.atan2(m.ey, m.ex);
-        const sx = m.s * (1 + mag), sy = m.s * (1 - mag * 0.55);
-        el.style.transform = `translateX(${m.x.toFixed(2)}px) rotate(${ang.toFixed(4)}rad) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) rotate(${(-ang).toFixed(4)}rad)`;
-      }
+      // Estiramiento solo en un eje (el del movimiento dominante): a los lados o arriba/abajo, nunca en diagonal
+      const ax = Math.abs(m.ex), ay = Math.abs(m.ey), mag = Math.min(o.prop === 'scale' ? 0.08 : 0.13, Math.max(ax, ay));
+      const sx = m.s * (ax >= ay ? 1 + mag : 1 - mag * 0.55), sy = m.s * (ax >= ay ? 1 - mag * 0.55 : 1 + mag);
+      if (o.prop === 'scale') el.style.scale = `${sx.toFixed(4)} ${sy.toFixed(4)}`;
+      else el.style.transform = `translateX(${m.x.toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
       el.style.setProperty('--lg-dx', (-m.ex * 22).toFixed(2) + 'px');
       el.style.setProperty('--lg-dy', (-m.ey * 22).toFixed(2) + 'px');
-      el.style.setProperty('--lg-on', ((m.s - o.reposo) / ((o.activo - o.reposo) || 1)).toFixed(3));
     }
     function paso(t) {
       const dt = m.t ? Math.min(0.032, (t - m.t) / 1000) : 0.016; m.t = t;
-      const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      if (m.px !== null && dt > 0) {
-        m.EX = m.EX * 0.6 + ((cx - m.px) / dt) * est * 0.4;
-        m.EY = m.EY * 0.6 + ((cy - m.py) / dt) * est * 0.4;
+      // Velocidad: la del puntero si quien arrastra la da (sin medir la pagina: no fuerza a recalcular el diseno);
+      // si no, se mide la pieza en pantalla
+      if (!m.puntero || !m.agarrado) {
+        const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (m.px !== null && dt > 0) {
+          m.EX = m.EX * 0.6 + ((cx - m.px) / dt) * est * 0.4;
+          m.EY = m.EY * 0.6 + ((cy - m.py) / dt) * est * 0.4;
+        }
+        m.px = cx; m.py = cy;
       }
-      m.px = cx; m.py = cy; m.EX *= 0.85; m.EY *= 0.85;
+      m.EX *= 0.85; m.EY *= 0.85;
       m.vs += ((m.S - m.s) * 420 - m.vs * 20) * dt; m.s += m.vs * dt;
       m.vx += ((m.X - m.x) * 520 - m.vx * 24) * dt; m.x += m.vx * dt;
-      m.vex += ((m.EX - m.ex) * 300 - m.vex * 15) * dt; m.ex += m.vex * dt;
-      m.vey += ((m.EY - m.ey) * 300 - m.vey * 15) * dt; m.ey += m.vey * dt;
+      m.vex += ((m.EX - m.ex) * 420 - m.vex * 26) * dt; m.ex += m.vex * dt;
+      m.vey += ((m.EY - m.ey) * 420 - m.vey * 26) * dt; m.ey += m.vey * dt;
       pinta();
       const quieto = !m.agarrado && Math.abs(m.S - m.s) < 1e-3 && Math.abs(m.vs) < 1e-2 && Math.abs(m.X - m.x) < 0.05 && Math.abs(m.vx) < 0.1
         && Math.hypot(m.ex, m.ey, m.vex, m.vey, m.EX, m.EY) < 2e-3;
-      if (quieto) { m.vivo = false; m.t = 0; m.px = null; m.ex = m.ey = m.vex = m.vey = 0; pinta(); return; }
+      if (quieto) { m.vivo = false; m.t = 0; m.px = null; m.puntero = null; m.ex = m.ey = m.vex = m.vey = 0; pinta(); return; }
       requestAnimationFrame(paso);
     }
     const arranca = () => { if (reducido()) { m.s = m.S; m.x = m.X; pinta(); return; } if (!m.vivo) { m.vivo = true; requestAnimationFrame(paso); } };
     pinta();
     return {
       tocar() { m.agarrado = true; m.S = o.activo; arranca(); },
-      soltar() { m.agarrado = false; m.S = o.reposo; arranca(); },
+      soltar() { m.agarrado = false; m.S = o.reposo; m.puntero = null; arranca(); },
       ir(x, conSalto = true) { m.X = x; if (!conSalto) { m.x = x; m.vx = 0; pinta(); } else arranca(); },
-      mover() { arranca(); }
+      // mover(): la pieza se ha movido. Con (x, y) del puntero, la velocidad sale de ahi (lo mas barato y fluido)
+      mover(x, y) {
+        if (typeof x === 'number') {
+          const t = performance.now(), p = m.puntero;
+          if (p && t > p.t) {
+            const dt = Math.max(0.008, (t - p.t) / 1000);
+            m.EX = m.EX * 0.5 + ((x - p.x) / dt) * est * 0.5;
+            m.EY = m.EY * 0.5 + ((y - p.y) / dt) * est * 0.5;
+          }
+          m.puntero = { x, y, t };
+        }
+        arranca();
+      }
     };
   }
+
 
   /* ---------- Controles liquidos: sliders e interruptores como en iOS 26 ---------- */
   // Slider: la bolita blanca (pildora) se convierte al pulsar en una lente de cristal que refracta la barra.

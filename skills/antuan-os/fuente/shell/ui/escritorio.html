@@ -374,7 +374,14 @@ document.addEventListener('pointerdown', (e) => {
   const el = h.closest('.wd'), r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
   el.classList.add('drag'); el.style.right = 'auto';
   if (el._mu) el._mu.tocar();
-  const mv = (ev) => { el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px'; if (el._mu) el._mu.mover(); };
+  // un movimiento por fotograma (el raton manda muchos mas), y la velocidad del muelle sale del raton
+  let ultimo = null, marco = 0;
+  const mueve = () => {
+    marco = 0; const ev = ultimo; if (!ev) return;
+    el.style.left = Math.max(0, Math.min(innerWidth - r.width, ev.clientX - ox)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 60, ev.clientY - oy)) + 'px';
+    if (el._mu) el._mu.mover(ev.clientX, ev.clientY);
+  };
+  const mv = (ev) => { ultimo = ev; if (!marco) marco = requestAnimationFrame(mueve); };
   const up = () => { el.classList.remove('drag'); if (el._mu) el._mu.soltar(); el.dataset.custom = '1'; removeEventListener('pointermove', mv); removeEventListener('pointerup', up); saveW(el.dataset.w, { x: parseInt(el.style.left), y: parseInt(el.style.top) }); layoutWidgets(); };
   addEventListener('pointermove', mv); addEventListener('pointerup', up);
 });

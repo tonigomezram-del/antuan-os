@@ -38,7 +38,7 @@ function vistaLiquida() {
     if (!ag) return;
     lente.style.left = Math.max(-60, Math.min(caja.clientWidth - 120, e.clientX - ag.x)) + 'px';
     lente.style.top = Math.max(-40, Math.min(caja.clientHeight - 70, e.clientY - ag.y)) + 'px';
-    mu.mover();
+    mu.mover(e.clientX, e.clientY);
   });
   const fin = () => { if (ag) { ag = null; mu.soltar(); } };
   lente.addEventListener('pointerup', fin); lente.addEventListener('pointercancel', fin);

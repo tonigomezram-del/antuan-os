@@ -147,3 +147,7 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
 - Forma (`lgForma`: `redondo` o `cuadrado`): la clase `html.lg-cuadrado` baja los radios (dock y bandeja 16 px, widgets 22, tarjetas 20). Las piezas leen su radio del CSS.
 - Encender y apagar: el interruptor "Cristal" del panel rápido (`data-setting="liquidGlass"`, activado por defecto) y el del Centro. El escritorio aplica o quita el cristal al momento.
 - Actualizar Windows: `irm https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/actualizar.ps1 | iex` (Antuan instalado o carpeta `UmbraOS\shell`). Cierra Antuan, copia `fuente/shell` (guarda una copia en `.anterior`) y lo vuelve a abrir con los mismos argumentos.
+- Arrastres fluidos (2026-10-26):
+  - El dock y los widgets se mueven una vez por fotograma (se guarda el último evento del ratón y se aplica en `requestAnimationFrame`). El dock se mueve con `transform: translate3d`, que no recalcula la página.
+  - El muelle toma la velocidad del ratón (`mover(x, y)`) en vez de medir la pieza en cada fotograma.
+  - El estiramiento va solo en un eje, el del movimiento dominante (nunca en diagonal; a Toni le parecía feísimo): máximo +13 % (8 % con la propiedad `scale` del dock), y vuelve en unos 0,5 s.

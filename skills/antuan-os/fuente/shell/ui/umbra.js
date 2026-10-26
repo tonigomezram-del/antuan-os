@@ -247,27 +247,40 @@ U.on('layout', layout);
 U.on('edge', (e) => set({ edge: e }));
 
 /* Arrastre con anclaje magnetico */
-let drag = null, suppressClick = false;
+let drag = null, suppressClick = false, marcoDrag = 0;
 dock.addEventListener('pointerdown', (e) => { if (e.button === 0) drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; });
+// El raton manda muchos eventos por fotograma: se guarda el ultimo y el dock se mueve una vez por fotograma,
+// con transform (lo mueve la tarjeta grafica sin recalcular la pagina)
 addEventListener('pointermove', (e) => {
   if (!drag) return;
-  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+  drag.ex = e.clientX; drag.ey = e.clientY;
   if (!drag.moved) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
     drag.moved = true; dock.setPointerCapture(drag.id); dock.classList.add('dragging');
     closePanels(); resetMagnify(); hideTip(); tick(900, .03);
     U.panel(true, false);
+    dock.style.left = drag.x + 'px'; dock.style.top = drag.y + 'px';
   }
-  dock.style.left = e.clientX + 'px'; dock.style.top = e.clientY + 'px'; dock.style.transform = 'translate(-50%, -50%)';
-  const e2 = nearestEdge(e.clientX, e.clientY);
-  if (e2 !== drag.edge) { drag.edge = e2; tick(1500, .02, .02); }
-  $$('.edge-hint').forEach((h) => h.classList.toggle('on', h.dataset.e === e2));
-  dock.classList.toggle('vertical', e2 === 'left' || e2 === 'right');
-  updateWp();
-  if (dock._lgGel) dock._lgGel.mover(); // liquid glass: el dock se estira con la velocidad del arrastre
+  if (!marcoDrag) marcoDrag = requestAnimationFrame(moverDock);
 });
+function moverDock() {
+  marcoDrag = 0;
+  if (!drag || !drag.moved) return;
+  const x = drag.ex, y = drag.ey;
+  dock.style.transform = `translate3d(${x - drag.x}px, ${y - drag.y}px, 0) translate(-50%, -50%)`;
+  const e2 = nearestEdge(x, y);
+  if (e2 !== drag.edge) {   // solo al cambiar de borde: es lo unico que cambia el tamano del dock
+    drag.edge = e2; tick(1500, .02, .02);
+    $$('.edge-hint').forEach((h) => h.classList.toggle('on', h.dataset.e === e2));
+    dock.classList.toggle('vertical', e2 === 'left' || e2 === 'right');
+  }
+  updateWp();
+  if (dock._lgGel) dock._lgGel.mover(x, y); // liquid glass: se estira con la velocidad del raton
+}
 addEventListener('pointerup', () => {
   if (!drag) return;
   const d = drag; drag = null;
+  cancelAnimationFrame(marcoDrag); marcoDrag = 0;
   if (!d.moved) return;
   dock.classList.remove('dragging');
   $$('.edge-hint').forEach((h) => h.classList.remove('on'));

@@ -115,7 +115,7 @@ body.panel-open #backdrop { visibility: visible; background: rgba(4,5,8,.42); }
 #dock.vertical, #dock.vertical .dock-group { flex-direction: column; }
 .dock-group { display: flex; align-items: center; gap: 4px; }
 .dock-group:empty, .dock-group:empty + .dock-sep, .running-sep:has(+ .dock-group:empty) { display: none; }
-#dock.dragging { box-shadow: 0 40px 90px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(var(--accent-rgb), .35); }
+#dock.dragging { box-shadow: 0 40px 90px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(var(--accent-rgb), .35); will-change: transform, scale; }
 #dock.morph { animation: morph var(--t-slow) var(--spring); }
 @keyframes morph { 0% { scale: .86; opacity: .6; } 100% { scale: 1; opacity: 1; } }
 .dock-sep { width: 1px; height: 26px; background: rgba(255,255,255,.10); margin: 0 4px; border-radius: 1px; flex: none; }
