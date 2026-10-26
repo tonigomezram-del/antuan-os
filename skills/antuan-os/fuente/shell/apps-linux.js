@@ -134,4 +134,4 @@ function launch(a) {
   if (a && a.desktopId) { const p = spawn('gtk-launch', [a.desktopId.replace(/\.desktop$/, '')], { detached: true, stdio: 'ignore' }); p.on('error', () => { }); p.unref(); }
 }
 
-module.exports = { scan, iconForExe, launch, launchDesktopFile, parseDesktop, setTerminal, glyphFor, resolveIcon };
+module.exports = { DIRS, scan, iconForExe, launch, launchDesktopFile, parseDesktop, setTerminal, glyphFor, resolveIcon };

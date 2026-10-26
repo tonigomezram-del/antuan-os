@@ -786,6 +786,32 @@ ipcMain.handle('init', async () => {
     user: (process.env.USERNAME || process.env.USER || 'Tú').replace(/^\w/, (c) => c.toUpperCase())
   };
 });
+// Antuan OS: lo que se instala (Tienda, apt, Flatpak, Wine...) aparece solo en el Inicio, el buscador y el Escritorio.
+// Cada 4 s se mira la lista de lanzadores .desktop; si cambia, se rehace el catalogo y las apps nuevas van al Escritorio.
+if (LINUX) {
+  let firma = null;
+  const firmaApps = () => apps.DIRS.map((d) => { try { return d + ':' + fs.readdirSync(d).filter((x) => x.endsWith('.desktop')).sort().join(','); } catch { return d + ':-'; } }).join('|');
+  setInterval(async () => {
+    if (!catalog.length) return;
+    const f = firmaApps();
+    if (firma === null || f === firma) { firma = f; return; }
+    firma = f;
+    try {
+      const antes = new Set(catalog.map((a) => a.id));
+      const nuevo = await apps.scan();
+      for (const p of APPS_PROPIAS) if (!nuevo.some((c) => c.id === p.id)) nuevo.push({ ...p });
+      nuevo.sort((a, b) => (a.display || a.name).localeCompare(b.display || b.name, 'es'));
+      const nuevas = nuevo.filter((a) => a.kind === 'desktop' && !antes.has(a.id));
+      catalog = nuevo;
+      if (config.appsAlEscritorio !== false) for (const a of nuevas) {
+        try { const d = path.join(app.getPath('desktop'), a.desktopId); if (!fs.existsSync(d)) { fs.copyFileSync(a.desktop, d); fs.chmodSync(d, 0o755); } } catch (e) { log('escritorio', e && e.message); }
+      }
+      if (win && !win.isDestroyed()) win.webContents.send('catalog', catalog);
+      if (nuevas.length) avisar('bag', nuevas.length === 1 ? (nuevas[0].display || nuevas[0].name) + ' instalada: ya está en el Escritorio' : nuevas.length + ' apps nuevas en el Escritorio');
+      logos.enrich(catalog).then(() => { catalog.logosReady = true; if (win && !win.isDestroyed()) win.webContents.send('catalog', catalog); }).catch(() => { });
+    } catch (e) { log('apps nuevas', e && e.stack || e); }
+  }, 4000);
+}
 ipcMain.on('hit', (_, inside) => { if (win && !LINUX) atravesar(!inside); }); // en Antuan OS mandan las zonas
 ipcMain.on('panel', (_, open, restore = true) => {
   panelOpen = open;
