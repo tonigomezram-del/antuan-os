@@ -1,5 +1,15 @@
 # Antuan OS
 
+## Actualizar un Antuan ya instalado
+
+Abre la Terminal Antuan, pega esto y pon tu contraseña:
+
+```
+curl -fsSL https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/actualizar.sh | sudo bash
+```
+
+Se baja lo último y reinicia el escritorio. No hace falta pendrive ni ISO.
+
 Sistema operativo y escritorio propio de Toni Gomez, sobre **Debian 13 "trixie"**. Este repositorio es a la vez:
 
 - **El código completo** (`skills/antuan-os/fuente/`):
