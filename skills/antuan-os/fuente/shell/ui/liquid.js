@@ -9,7 +9,8 @@
   const NS = 'http://www.w3.org/2000/svg';
   const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
   const N = 128;               // muestras del perfil del bisel
-  const AJUSTES = { bisel: 22, grosor: 70, refraccion: 1, cromatica: 0.10, desenfoque: 0.6, especular: 0.9, saturacion: 1.35 };
+  // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
+  const AJUSTES = { bisel: 30, grosor: 150, refraccion: 1.5, cromatica: 0.06, desenfoque: 0.5, especular: 1, saturacion: 1.3 };
 
   // Perfil del borde: superficie convexa tipo squircle, altura 0 en el canto y 1 donde acaba el bisel
   const altura = (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4);
@@ -17,14 +18,14 @@
   // Desplazamiento (en px) que sufre la luz en cada punto del bisel: un rayo vertical entra en una superficie
   // inclinada y se tuerce segun Snell. Devuelve la tabla normalizada (0..1) y el maximo en px.
   function perfil(bisel, grosor) {
-    const n1 = 1, n2 = 1.5, t = new Float32Array(N + 1);
+    const n2 = 1.5, t = new Float32Array(N + 1);
     let max = 0;
     for (let i = 0; i <= N; i++) {
-      const x = Math.min(Math.max(i / N, 0.0005), 0.9995), dx = 0.001;
-      const pendiente = (altura(Math.min(x + dx, 1)) - altura(Math.max(x - dx, 0))) / (2 * dx) * (grosor / bisel);
-      const incid = Math.atan(pendiente);                       // angulo entre el rayo y la normal
-      const refr = Math.asin(Math.min(1, (n1 / n2) * Math.sin(incid)));
-      const d = Math.tan(incid - refr) * grosor * (1 - altura(x) * 0.5);
+      const x = Math.min(Math.max(i / N, 0.0005), 0.9995), dx = 0.0005;
+      const pendiente = (altura(Math.min(x + dx, 1)) - altura(Math.max(x - dx, 0))) / (2 * dx);
+      const incid = Math.atan(pendiente);                       // angulo entre el rayo vertical y la normal
+      const refr = Math.asin(Math.sin(incid) / n2);
+      const d = Math.tan(incid - refr) * (grosor + bisel * (1 - altura(x)));
       t[i] = d; if (d > max) max = d;
     }
     for (let i = 0; i <= N; i++) t[i] = max ? t[i] / max : 0;
@@ -45,30 +46,34 @@
 
   function mapas(w, h, r, a) {
     const bisel = Math.max(4, Math.min(a.bisel, r, w / 2, h / 2));
-    const { tabla, max } = perfil(bisel, a.grosor);
+    // el grosor de la demo (150) es para una lente de 140 px de alto: en piezas mas bajas (el dock) se reduce igual
+    const { tabla, max } = perfil(bisel, a.grosor * Math.min(1, Math.min(w, h) / 140));
     const cd = document.createElement('canvas'), cs = document.createElement('canvas');
     cd.width = cs.width = w; cd.height = cs.height = h;
     const gd = cd.getContext('2d'), gs = cs.getContext('2d');
     const id = gd.createImageData(w, h), is = gs.createImageData(w, h);
-    const L = { x: -0.55, y: -0.83 };           // luz arriba a la izquierda, como en iOS
+    const L = { x: -0.6, y: -0.8 };             // luz arriba a la izquierda, como en iOS
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const o = (y * w + x) * 4, c = campo(x + 0.5, y + 0.5, w, h, r);
       let dx = 0, dy = 0;
       if (c.d >= 0 && c.d < bisel) {
         const m = tabla[Math.round((c.d / bisel) * N)];
-        // se toma la imagen de mas hacia fuera: el fondo que rodea el cristal se curva hacia dentro del canto
-        dx = c.nx * m; dy = c.ny * m;
+        // hacia dentro: la lente amplia lo que tiene debajo, como en iOS (y en la demo con backdrop-filter)
+        dx = -c.nx * m; dy = -c.ny * m;
       }
       id.data[o] = 128 + dx * 127; id.data[o + 1] = 128 + dy * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
-      // brillo del canto: fino, mas fuerte donde la normal mira a la luz (y un reflejo suave en el lado opuesto)
-      if (c.d >= 0 && c.d < 3.2) {
-        const cara = c.nx * L.x + c.ny * L.y, k = Math.pow(Math.max(cara, 0), 1.6) + 0.35 * Math.pow(Math.max(-cara, 0), 2);
-        const f = 1 - c.d / 3.2, al = Math.min(1, k * f * f * 1.15);
+      // brillo especular: resplandor a lo largo del bisel donde la normal mira a la luz (y al lado opuesto),
+      // mas un canto fino y nitido
+      if (c.d >= 0 && c.d < bisel) {
+        const t = c.d / bisel, cara = Math.abs(c.nx * L.x + c.ny * L.y);
+        const bloom = Math.pow(cara, 2) * Math.pow(1 - t, 3) * 0.85;
+        const canto = c.d < 1.5 ? 0.55 + 0.45 * cara : 0;
+        const al = Math.min(1, bloom + canto * (1 - c.d / 1.5));
         is.data[o] = is.data[o + 1] = is.data[o + 2] = 255; is.data[o + 3] = al * 255;
       }
     }
     gd.putImageData(id, 0, 0); gs.putImageData(is, 0, 0);
-    return { desp: cd.toDataURL(), espec: cs.toDataURL(), escala: max * 2 * a.refraccion };
+    return { desp: cd.toDataURL(), espec: cs.toDataURL(), escala: max * a.refraccion };
   }
 
   let defs = null, cuenta = 0;
@@ -84,9 +89,11 @@
   const el = (tag, at, padre) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (padre) padre.appendChild(e); return e; };
 
   // Filtro con aberracion cromatica: tres desplazamientos (R, G, B) con fuerzas un poco distintas
-  function crearFiltro(idF) {
+  // modo 'lente' (dock, paneles): el brillo se suma en pantalla. modo 'control' (sliders, interruptores):
+  // como en la demo, el canto toma los colores de debajo muy saturados y encima va el brillo suave.
+  function crearFiltro(idF, modo = 'lente') {
     const f = el('filter', { id: idF, x: '0', y: '0', width: '100%', height: '100%', 'color-interpolation-filters': 'sRGB', filterUnits: 'objectBoundingBox', primitiveUnits: 'userSpaceOnUse' }, contenedor());
-    el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '0.6', result: 'b', 'data-k': 'blur' }, f);
+    el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '0.5', result: 'b', 'data-k': 'blur' }, f);
     el('feImage', { result: 'm', preserveAspectRatio: 'none', 'data-k': 'desp' }, f);
     const canales = [['r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['bl', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0']];
     for (const [c, m] of canales) {
@@ -94,12 +101,18 @@
       el('feColorMatrix', { in: 'd' + c, type: 'matrix', values: m, result: 'c' + c }, f);
     }
     el('feBlend', { in: 'cr', in2: 'cg', mode: 'screen', result: 'rg' }, f);
-    el('feBlend', { in: 'rg', in2: 'cbl', mode: 'screen', result: 'rgb' }, f);
-    el('feColorMatrix', { in: 'rgb', type: 'saturate', values: '1.35', result: 'sat', 'data-k': 'sat' }, f);
+    el('feBlend', { in: 'rg', in2: 'cbl', mode: 'screen', result: 'disp' }, f);
+    el('feColorMatrix', { in: 'disp', type: 'saturate', values: '1.3', result: 'sat', 'data-k': 'sat' }, f);
     el('feImage', { result: 'e', preserveAspectRatio: 'none', 'data-k': 'espec' }, f);
     const ct = el('feComponentTransfer', { in: 'e', result: 'ef' }, f);
-    el('feFuncA', { type: 'linear', slope: '0.9', 'data-k': 'alfa' }, ct);
-    el('feBlend', { in: 'ef', in2: 'sat', mode: 'screen' }, f);
+    el('feFuncA', { type: 'linear', slope: '1', 'data-k': 'alfa' }, ct);
+    if (modo === 'control') {
+      el('feComposite', { in: 'sat', in2: 'e', operator: 'in', result: 'borde' }, f);
+      el('feBlend', { in: 'borde', in2: 'disp', mode: 'normal', result: 'conBorde' }, f);
+      el('feBlend', { in: 'ef', in2: 'conBorde', mode: 'normal' }, f);
+    } else {
+      el('feBlend', { in: 'ef', in2: 'sat', mode: 'screen' }, f);
+    }
     return f;
   }
 
@@ -144,7 +157,7 @@
   function filtroFijo(w, h, r, extra = {}) {
     const a = { ...AJUSTES, ...extra }, clave = [w, h, r, JSON.stringify(extra)].join('|');
     if (fijos.has(clave)) return fijos.get(clave);
-    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, 'control'), m = mapas(w, h, r, a), q = (k) => f.querySelector(`[data-k="${k}"]`);
     for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
     q('esc-r').setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
     q('esc-g').setAttribute('scale', m.escala.toFixed(2));
@@ -163,7 +176,7 @@
     const caja = document.createElement('span'); caja.className = 'lg-range';
     inp.parentNode.insertBefore(caja, inp); caja.appendChild(inp);
     const bola = document.createElement('span'); bola.className = 'lg-thumb'; caja.appendChild(bola);
-    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 12, grosor: 40, cromatica: 0.18, desenfoque: 0, especular: 1, saturacion: 1.6 });
+    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, cromatica: 0.1, desenfoque: 0, especular: 0.4, saturacion: 7 });
     bola.style.setProperty('--lg-filtro', `url(#${id})`);
     const sitio = () => {
       const min = +inp.min || 0, max = inp.max === '' ? 100 : +inp.max, v = (+inp.value - min) / ((max - min) || 1);
@@ -183,7 +196,7 @@
   // Interruptor: la bola crece al pulsar y se vuelve cristal; al soltar salta con muelle al otro lado
   function interruptorLiquido(sw) {
     if (sw._lg) return; sw._lg = true;
-    const id = filtroFijo(30, 24, 12, { bisel: 9, grosor: 34, cromatica: 0.2, desenfoque: 0, especular: 1, saturacion: 1.7 });
+    const id = filtroFijo(30, 24, 12, { bisel: 9, grosor: 34, cromatica: 0.1, desenfoque: 0.2, especular: 0.5, saturacion: 6 });
     sw.style.setProperty('--lg-filtro', `url(#${id})`);
   }
   // Pulsar un cristal (dock, bandeja): se aplasta un poco hacia el dedo y vuelve con rebote, como gelatina

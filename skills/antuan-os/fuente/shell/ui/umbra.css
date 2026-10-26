@@ -81,13 +81,13 @@ svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-widt
   background-size: var(--wp-size, cover); background-position: var(--wp-pos, center);
 }
 html.lg .wp::before { display: none; }
-html.lg .wp::after { background: rgba(11, 13, 18, calc(var(--glass-a) * .32)); z-index: 1; }
+html.lg .wp::after { display: none; }
+/* Cristal transparente como en la demo: sin tinte, sombra exterior suave y sombras interiores claras/oscuras */
 html.lg .glass:has(.wp) {
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.015) 45%, rgba(255,255,255,.04));
-  box-shadow: 0 18px 50px -14px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.2),
-    inset 0 1px 1px rgba(255,255,255,.35), inset 0 -1px 1px rgba(255,255,255,.12);
+  background: rgba(255,255,255,.015);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07);
 }
-html.lg .glass:has(.wp)::before { opacity: .55; }
+html.lg .glass:has(.wp)::before { display: none; }
 html:not(.lg) .wp-lente { display: none; }
 
 /* ---------- Arranque ---------- */
