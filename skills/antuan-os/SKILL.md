@@ -151,3 +151,8 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - El dock y los widgets se mueven una vez por fotograma (se guarda el último evento del ratón y se aplica en `requestAnimationFrame`). El dock se mueve con `transform: translate3d`, que no recalcula la página.
   - El muelle toma la velocidad del ratón (`mover(x, y)`) en vez de medir la pieza en cada fotograma.
   - El estiramiento va solo en un eje, el del movimiento dominante (nunca en diagonal; a Toni le parecía feísimo): máximo +13 % (8 % con la propiedad `scale` del dock), y vuelve en unos 0,5 s.
+- Fondos para el cristal líquido (`ui/fondos.js`, `FondosAntuan.pintar(estilo, W, H)`):
+  - Estilos Brasa, Aurora, Oceano, Lavanda y Bosque: cintas de color anchas y curvas sobre negro, con sombra, bandas marcadas (a Toni le gustan más que el volumen suavizado) y un brillo fino en el canto.
+  - Un degradado liso no deja ver la refracción. Se generan en el propio PC, sin descargas.
+  - En el Centro: Personalización > "Fondos para cristal líquido".
+  - Ojo: `setWallpaper` borra los `umbra-fondo-*.png` anteriores. El fondo antiguo de Toni está guardado en `%LOCALAPPDATA%\UmbraOS\fondos-guardados\`.

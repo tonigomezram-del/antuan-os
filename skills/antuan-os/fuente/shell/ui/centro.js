@@ -421,6 +421,7 @@ const SECTIONS = {
               ['lgContenido', 'Afectar al contenido', 'El texto y los iconos de dentro también se doblan', 0, 100, 40]]
             .map(([k, n, d, mi, ma, def]) => `<div class="row"><div class="lbl"><b>${n}</b><span>${d}</span></div><input type="range" min="${mi}" max="${ma}" value="${C[k] ?? def}" data-k="${k}"></div>`).join('')}
           <div class="row"><div class="lbl"><b>Valores de fábrica</b></div><button class="btn" data-lg-reset>Restablecer</button></div></div>
+        <div class="card section"><h3>Fondos para cristal líquido <span class="r faint">Con formas y contraste: el cristal se luce</span></h3><div class="walls" id="fondosLG">${(window.FondosAntuan ? FondosAntuan.estilos : []).map((n) => `<button class="wall" data-fondo="${n}">${n === 'Oceano' ? 'Océano' : n}</button>`).join('')}</div></div>
         <div class="card section"><h3>Fondo de pantalla Antuan</h3><div class="walls">${WALLS.map(([n, a, b, c]) => `<button class="wall" data-wall="${a},${b},${c}" style="background:${wallCss(a, b, c)}">${n}</button>`).join('')}</div></div>
         <div class="card section"><h3>Escritorio y sonido</h3>
           <div class="row"><div class="lbl"><b>Escritorio Antuan</b><span>Iconos organizados, reloj y widgets</span></div>${sw(C.desktop !== false, 'data-b="desktop"')}</div>
@@ -432,6 +433,8 @@ const SECTIONS = {
         }).join('')}</div>`);
       $$('#pane input[type=range]').forEach(paint);
       vistaLiquida();
+      // miniaturas de los fondos para cristal liquido
+      for (const b of $$('[data-fondo]')) b.style.background = `center/cover url(${FondosAntuan.pintar(b.dataset.fondo, 384, 216).toDataURL()})`;
       pane.addEventListener('click', async (e) => {
         const th = e.target.closest('[data-theme]');
         if (th) {
@@ -453,6 +456,13 @@ const SECTIONS = {
         const a = e.target.closest('[data-acc]'); if (a) { setC({ accent: a.dataset.acc }); $$('[data-acc]').forEach((x) => x.setAttribute('aria-pressed', x === a)); }
         const b = e.target.closest('[data-b]'); if (b) { const on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); setC({ [b.dataset.b]: on }); }
         const ed = e.target.closest('[data-edge]'); if (ed) { setC({ edge: ed.dataset.edge }); $$('[data-edge]').forEach((x) => x.setAttribute('aria-pressed', x === ed)); }
+        const fo = e.target.closest('[data-fondo]');
+        if (fo) {
+          fo.style.opacity = .5;
+          const W = Math.round(screen.width * devicePixelRatio), H = Math.round(screen.height * devicePixelRatio);
+          const ok = await U.ask('setWallpaper', FondosAntuan.pintar(fo.dataset.fondo, W, H).toDataURL('image/png'));
+          fo.style.opacity = 1; toast(ok ? 'Fondo aplicado' : 'No se pudo aplicar'); return;
+        }
         const w = e.target.closest('[data-wall]'); if (w) { w.style.opacity = .5; const ok = await makeWallpaper(...w.dataset.wall.split(',').map(Number)); w.style.opacity = 1; toast(ok ? 'Fondo aplicado' : 'No se pudo aplicar'); }
       });
       pane.addEventListener('input', (e) => {
