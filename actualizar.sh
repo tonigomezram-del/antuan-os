@@ -12,7 +12,7 @@ APP=/opt/umbra/resources/app
 echo "[ 50%] Copia de seguridad en $APP.anterior"
 rm -rf "$APP.anterior"; cp -a "$APP" "$APP.anterior"
 echo "[ 70%] Instalando la version nueva..."
-cp "$NUEVO"/*.js "$NUEVO"/*.ps1 "$NUEVO"/package.json "$APP"/ 2>/dev/null || true
+cp "$NUEVO"/*.js "$NUEVO"/*.ps1 "$NUEVO"/*.json "$APP"/ 2>/dev/null || true
 cp -r "$NUEVO"/ui/. "$APP"/ui/
 chmod -R a+rX "$APP"
 rm -rf "$T"

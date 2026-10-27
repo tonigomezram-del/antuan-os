@@ -1,0 +1,26 @@
+/* Kit Liquid Glass: piezas listas para usar con liquid.js (LiquidGlass.cristal) y liquid.css (sliders/interruptores).
+   El aspecto es el de los widgets de Antuan: cristal casi transparente, tinte oscuro ajustable, sombra exterior
+   suave y dos sombras interiores (oscura arriba, clara abajo). El canto brillante y la refraccion los pone el filtro. */
+:root { --lg-tinte: .16; --lg-acento: #ff9466; }
+.lg-cristal {
+  position: relative; color: #fff;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte));
+  box-shadow: 0 18px 44px -18px rgba(0,0,0,.6), inset 0 1.6px 16px rgba(0,0,0,.09), inset 0 -1.6px 16px rgba(255,255,255,.07);
+}
+.lg-cristal > :first-child { border-radius: inherit; }
+/* Panel o widget: muy redondo (38 px) y con aire */
+.lg-panel { border-radius: 38px; padding: 26px 30px; }   /* margen: el texto queda fuera del canto que se dobla */
+.lg-panel h4 { margin: 0 0 10px; font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: .09em; text-transform: uppercase; opacity: .6; }
+/* Boton pildora de cristal (con muelle al apretar si se engancha con LiquidGlass.cristal) */
+.lg-boton { border: 0; border-radius: 999px; padding: 12px 22px; font: 600 15px system-ui, sans-serif; color: #fff; cursor: pointer; }
+.lg-boton.primario { background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%), var(--lg-acento); }
+/* Icono de app en baldosa redondeada */
+.lg-icono { width: 58px; height: 58px; border-radius: 30%; display: grid; place-items: center; }
+/* Dock: fila de iconos en una pildora de cristal */
+.lg-dock { display: flex; gap: 10px; padding: 10px 12px; border-radius: 30px; }
+/* Base de sliders e interruptores (la bola de cristal la pone liquid.css) */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 26px; background: none; --v: 50%; }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--lg-acento) var(--v), rgba(255,255,255,.14) var(--v)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%; background: #fff; }
+.switch { position: relative; width: 44px; height: 24px; border: 0; padding: 0; border-radius: 24px; background: rgba(255,255,255,.16); cursor: pointer; transition: background .3s; flex: none; }
+.switch[aria-checked="true"] { background: var(--lg-acento); }

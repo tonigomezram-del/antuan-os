@@ -10,6 +10,8 @@ curl -fsSL https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/act
 
 Se baja lo último y reinicia el escritorio. No hace falta pendrive ni ISO.
 
+Desde la versión 1.2 también se puede actualizar desde **Centro → Actualizaciones → Antuan**: avisa cuando hay versión nueva aquí y la instala con un botón.
+
 ## Actualizar Antuan en Windows
 
 Abre PowerShell y pega:
@@ -32,6 +34,12 @@ Sistema operativo y escritorio propio de Toni Gomez, sobre **Debian 13 "trixie"*
 ```
 /plugin marketplace add tonigomezram-del/antuan-os
 /plugin install antuan-os@antuan-os
+```
+
+Y la skill de Liquid Glass (el cristal de Antuan para cualquier proyecto):
+
+```
+/plugin install liquid-glass@antuan-os
 ```
 
 Después basta con decirle a Claude «Antuan OS» o «reconstruye mi ISO».

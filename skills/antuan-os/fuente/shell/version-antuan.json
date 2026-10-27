@@ -1,0 +1,14 @@
+{
+  "version": "1.2.0",
+  "fecha": "2026-10-27",
+  "cambios": [
+    "Cristal líquido tipo iOS en el dock, la bandeja, los widgets y las tarjetas, con ajustes en el Centro",
+    "Estilos de dock: Líquido, Barra (como Windows 11), Gota (experimento) y Clásico",
+    "Selección líquida en el dock y animaciones con muelle",
+    "Logos a color, planos y vectoriales para cualquier app",
+    "24 fondos nuevos hechos para el cristal: paisajes, espacio, minimalistas y cintas",
+    "Las apps instaladas aparecen solas en el Escritorio y el buscador",
+    "IAs en la Tienda: Claude, Claude Code, ChatGPT, Gemini y más",
+    "Actualizaciones de Antuan desde este panel"
+  ]
+}

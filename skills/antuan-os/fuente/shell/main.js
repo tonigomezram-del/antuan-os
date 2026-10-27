@@ -299,6 +299,29 @@ if (LINUX) apps.setTerminal((argv) => abrirAppUmbra('terminal', { orden: argv.ma
 // xdg-open manda al navegador todo lo que no entiende (ms-settings:, shell:, objetos convertidos en texto...).
 // Solo pasan direcciones web reales y rutas que existen; lo de Windows se traduce a Antuan o se descarta con aviso.
 ASKS.plataforma = () => process.platform;
+
+// ---------------------------------------------------------------- Actualizaciones de Antuan (desde GitHub)
+// La version instalada va en version-antuan.json; la ultima esta en el repositorio. El Centro las compara y,
+// si hay una nueva, la instala con el actualizador del repositorio (Linux: con pkexec; Windows: PowerShell).
+const REPO_ANTUAN = 'https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main';
+const leerVersion = () => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'version-antuan.json'), 'utf8')); } catch { return { version: '0.0.0' }; } };
+const masNueva = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+ASKS['antuan.version'] = () => new Promise((resolve) => {
+  const local = leerVersion();
+  const req = require('https').get(`${REPO_ANTUAN}/skills/antuan-os/fuente/shell/version-antuan.json?t=${Date.now()}`, { timeout: 8000 }, (r) => {
+    let d = ''; r.on('data', (c) => { d += c; });
+    r.on('end', () => { try { const remota = JSON.parse(d); resolve({ local, remota, hayNueva: masNueva(remota.version, local.version) }); } catch { resolve({ local, error: 'No se pudo leer la versión de GitHub' }); } });
+  });
+  req.on('timeout', () => req.destroy()); req.on('error', () => resolve({ local, error: 'Sin conexión con GitHub' }));
+});
+ASKS['antuan.actualizar'] = () => {
+  // el actualizador cierra Antuan, cambia los archivos y lo vuelve a abrir (en Antuan OS lo reabre la sesion)
+  const p = LINUX
+    ? spawn('pkexec', ['bash', '-c', `curl -fsSL ${REPO_ANTUAN}/actualizar.sh | bash`], { detached: true, stdio: 'ignore' })
+    : spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', `irm ${REPO_ANTUAN}/actualizar.ps1 | iex`], { detached: true, stdio: 'ignore', windowsHide: true });
+  p.on('error', () => { }); p.unref();
+  return true;
+};
 const existeCmd = (c) => LINUX && typeof c === 'string' && (c.startsWith('/') ? fs.existsSync(c) : ['/usr/bin/', '/usr/local/bin/', '/bin/', '/usr/sbin/'].some((d) => fs.existsSync(d + c)));
 const avisar = (ic, t) => { if (win && !win.isDestroyed()) win.webContents.send('toast', ic, t); };
 const noDisponible = (que) => { log('no disponible en Antuan OS:', typeof que === 'string' ? que.slice(0, 200) : typeof que); avisar('info', 'No disponible en Antuan OS'); };

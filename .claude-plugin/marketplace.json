@@ -1,11 +1,18 @@
 {
   "name": "antuan-os",
-  "owner": { "name": "Toni Gomez" },
+  "owner": {
+    "name": "Toni Gomez"
+  },
   "plugins": [
     {
       "name": "antuan-os",
       "source": "./",
       "description": "Antuan OS: el sistema operativo y escritorio propio de Toni (sobre Debian 13), con todo el código y cómo reconstruir la ISO idéntica."
+    },
+    {
+      "name": "liquid-glass",
+      "source": "./liquid-glass",
+      "description": "Cristal líquido tipo iOS 26 (el de Antuan) para cualquier web o app: refracción, controles, botones y animaciones con muelle."
     }
   ]
 }

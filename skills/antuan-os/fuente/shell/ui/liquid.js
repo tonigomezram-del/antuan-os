@@ -388,8 +388,32 @@
   const oyentes = new Set();
   function alCambiar(fn) { oyentes.add(fn); }
 
+  // Convierte cualquier elemento en cristal liquido como los widgets: lente a su medida (se rehace cuando cambia
+  // de tamano y cuando cambian los ajustes), y opcionalmente el contenido doblado y el muelle al apretarlo.
+  //   LiquidGlass.cristal(el, { radio, contenido: true, muelle: true, pieza: 'widget' })
+  function cristal(el, o = {}) {
+    if (el._lgCristal) return el._lgCristal;
+    el.classList.add('lg-cristal');
+    const pon = () => {
+      const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+      if (w < 8 || h < 8) return;
+      const r = o.radio ?? (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0);
+      el.style.backdropFilter = `url(#${filtroFijo(w, h, Math.min(r, w / 2, h / 2), { pieza: o.pieza || 'widget' }, 'lente')})`;
+      if (o.contenido && el.firstElementChild && AJUSTES.contenido > 0) el.firstElementChild.style.filter = `url(#${filtroFijo(w, h, Math.min(r, w / 2, h / 2), {}, 'contenido')})`;
+    };
+    let espera = 0;
+    new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(pon, 160); }).observe(el);
+    alCambiar(pon); pon();
+    const mu = o.muelle === false ? null : muelle(el, { reposo: 1, activo: o.activo ?? 1.04, estira: 0.00035 });
+    if (mu) {
+      el.addEventListener('pointerdown', () => mu.tocar());
+      window.addEventListener('pointerup', () => mu.soltar()); window.addEventListener('pointercancel', () => mu.soltar());
+    }
+    return (el._lgCristal = { actualizar: pon, muelle: mu });
+  }
+
   window.LiquidGlass = {
-    filtroFijo, muelle, gelatina, controles: vigilarControles,
+    filtroFijo, muelle, gelatina, cristal, controles: vigilarControles,
     ajustes: AJUSTES,
     iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
     desdeConfig, alCambiar,

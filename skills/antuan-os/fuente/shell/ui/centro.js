@@ -20,6 +20,25 @@ function applyLook() {
   root.classList.toggle('reduce-motion', !!C.reduceMotion);
   if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(C));
 }
+// Actualizaciones: tarjeta "Antuan" (version instalada contra la de GitHub, novedades y boton para actualizar)
+async function antuanActualizacion() {
+  const caja = document.getElementById('antuanUpDentro'), ver = document.getElementById('antuanVer');
+  if (!caja) return;
+  const v = await U.ask('antuan.version');
+  if (!caja.isConnected) return;
+  if (!v) { caja.innerHTML = '<div class="empty">No se pudo comprobar.</div>'; return; }
+  ver.textContent = 'Versión ' + v.local.version;
+  if (v.error) { caja.innerHTML = `<div class="empty">${esc(v.error)}</div>`; return; }
+  if (!v.hayNueva) { caja.innerHTML = '<div class="empty">Tienes la última versión de Antuan.</div>'; return; }
+  caja.innerHTML = `<div class="row"><span class="ic">${icon('down')}</span><div class="lbl"><b>Antuan ${esc(v.remota.version)} disponible</b><span>${esc(v.remota.fecha || '')}</span></div><button class="btn primary" id="antuanInstalar">Actualizar</button></div>` +
+    (v.remota.cambios || []).map((c) => `<div class="row"><span class="ic">${icon('spark')}</span><div class="lbl"><span>${esc(c)}</span></div></div>`).join('');
+  document.getElementById('antuanInstalar').addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Actualizando…';
+    await U.ask('antuan.actualizar');
+    toast(LINUX ? 'Pon tu contraseña: Antuan se reiniciará solo al acabar' : 'Antuan se cerrará y volverá a abrirse actualizado');
+  });
+}
+
 // Vista previa del cristal liquido (Personalizacion): una lente que se arrastra sobre rayas y texto, como la web
 function vistaLiquida() {
   const caja = document.getElementById('lgVista'), lente = document.getElementById('lgLente');
@@ -242,13 +261,14 @@ const SECTIONS = {
     t: 'Actualizaciones', d: 'Tú decides cuándo. Nunca más un reinicio por sorpresa.',
     async render(pane) {
       // Antuan OS nunca reinicia solo: sin protección ni pausa (son de Windows Update); se actualiza desde la Tienda
-      if (LINUX) mount(pane, `<div class="card"><h3>Pendientes <span class="r"><button class="btn" id="abrirTienda">Actualizar en la Tienda</button></span></h3><div id="ups">${loading('Consultando actualizaciones…')}</div></div>`);
-      else mount(pane, `<div class="card"><h3>Protección contra reinicios</h3>
+      if (LINUX) mount(pane, `<div class="card" id="antuanUp"><h3>Antuan <span class="r faint" id="antuanVer"></span></h3><div id="antuanUpDentro">${loading('Buscando versión nueva en GitHub…')}</div></div><div class="card section"><h3>Pendientes <span class="r"><button class="btn" id="abrirTienda">Actualizar en la Tienda</button></span></h3><div id="ups">${loading('Consultando actualizaciones…')}</div></div>`);
+      else mount(pane, `<div class="card" id="antuanUp"><h3>Antuan <span class="r faint" id="antuanVer"></span></h3><div id="antuanUpDentro">${loading('Buscando versión nueva en GitHub…')}</div></div><div class="card section"><h3>Protección contra reinicios</h3>
           <div class="row"><div class="lbl"><b>No reiniciar nunca solo mientras uso el PC</b><span>Horas activas de 6:00 a 24:00 y sin reinicios automáticos con la sesión abierta. Windows pedirá permiso de administrador.</span></div><button class="btn primary" id="protect">Activar</button></div>
           <div class="row"><div class="lbl"><b>Pausar actualizaciones</b><span>Útil antes de un examen, una partida importante o un viaje.</span></div>
             <select id="pdays"><option value="7">1 semana</option><option value="14">2 semanas</option><option value="35">5 semanas</option><option value="0">Reanudar</option></select><button class="btn" id="pause">Aplicar</button></div></div>
         <div class="card section"><h3>Pendientes <span class="r"><button class="btn" data-uri="ms-settings:windowsupdate">Abrir Windows Update</button></span></h3><div id="ups">${loading('Consultando Windows Update…')}</div></div>`);
       $('#abrirTienda')?.addEventListener('click', () => U.cmd('tienda'));
+      antuanActualizacion();
       if (!LINUX) $('#protect').addEventListener('click', async () => { const s = await G('comandoProteccionReinicios'); const ok = await U.ask('elevated', s); toast(ok ? 'Protección activada' : 'No se aplicó'); });
       if (!LINUX) $('#pause').addEventListener('click', async () => { const d = +$('#pdays').value; const s = await G('pausarActualizaciones', d); const ok = await U.ask('elevated', s); toast(ok ? (d ? `Pausadas ${d} días` : 'Reanudadas') : 'No se aplicó'); });
       pane.addEventListener('click', (e) => { const b = e.target.closest('[data-uri]'); if (b) U.openUri(b.dataset.uri); });

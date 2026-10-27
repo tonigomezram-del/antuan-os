@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquid Glass · demo</title>
+<link rel="stylesheet" href="liquid.css">
+<link rel="stylesheet" href="liquid-kit.css">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; font: 14px/1.4 system-ui, "Segoe UI", sans-serif; color: #fff; background: #000; }
+  /* El cristal necesita algo detras que doblar: un fondo con formas (aqui uno generado por fondos.js) */
+  #fondo { position: fixed; inset: 0; background-size: cover; background-position: center; }
+  .lente { position: fixed; left: 80px; top: 70px; width: 220px; height: 130px; border-radius: 65px; cursor: grab; touch-action: none; display: grid; place-items: center; }
+  .lente b { font: 300 38px/1 system-ui, sans-serif; }
+  .widget { position: fixed; right: 60px; top: 60px; width: 300px; }
+  .widget .grande { font: 200 56px/1 system-ui, sans-serif; margin: 6px 0; }
+  .ajustes { position: fixed; left: 60px; bottom: 140px; width: 360px; display: grid; gap: 12px; }
+  .fila { display: flex; align-items: center; gap: 12px; justify-content: space-between; font-size: 13px; }
+  .fila input[type=range] { width: 170px; }
+  .botones { position: fixed; right: 60px; bottom: 150px; display: flex; gap: 12px; }
+  .lg-dock { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); }
+  .lg-icono { font-size: 26px; }
+</style>
+</head>
+<body>
+<div id="fondo"></div>
+
+<!-- 1. Lente que se arrastra (crece al cogerla, se estira al moverla, rebota al soltarla) -->
+<div class="lente lg-cristal" id="lente"><b>22°</b></div>
+
+<!-- 2. Widget: panel de cristal con el contenido doblado cerca del canto -->
+<section class="widget lg-cristal lg-panel" id="widget"><div><h4>Tiempo</h4><div class="grande">22°</div>Olot · Despejado</div></section>
+
+<!-- 3. Ajustes en vivo: sliders e interruptores liquidos (la bola se vuelve lente al pulsarla) -->
+<section class="ajustes lg-cristal lg-panel" id="ajustes">
+  <h4>Cristal</h4>
+  <div class="fila">Refracción <input type="range" min="0" max="300" value="150" data-k="refraccion" data-div="100"></div>
+  <div class="fila">Efecto cromático <input type="range" min="0" max="30" value="6" data-k="cromatica" data-div="100"></div>
+  <div class="fila">Aumento (lupa) <input type="range" min="0" max="50" value="12" data-k="lupa" data-div="100"></div>
+  <div class="fila">Desenfoque <input type="range" min="0" max="60" value="12" data-k="desenfoque" data-div="10"></div>
+  <div class="fila">Tinte <input type="range" min="0" max="60" value="16" data-k="tinte" data-div="100"></div>
+  <div class="fila">Modo oscuro <button class="switch" aria-checked="true"></button></div>
+</section>
+
+<!-- 4. Botones de cristal con muelle -->
+<div class="botones"><button class="lg-boton lg-cristal">Cancelar</button><button class="lg-boton primario">Aceptar</button></div>
+
+<!-- 5. Dock -->
+<nav class="lg-dock lg-cristal" id="dock"><span class="lg-icono" style="background:#ff7a2f">🔥</span><span class="lg-icono" style="background:#3b82f6">🌊</span><span class="lg-icono" style="background:#22c55e">🌿</span><span class="lg-icono" style="background:#a855f7">🔮</span></nav>
+
+<script src="fondos.js"></script>
+<script src="liquid.js"></script>
+<script>
+  // fondo con formas (sin el, la refraccion no se ve: un degradado liso no tiene nada que doblar)
+  document.getElementById('fondo').style.backgroundImage = `url(${FondosAntuan.pintar('Brasa', innerWidth, innerHeight).toDataURL()})`;
+
+  LiquidGlass.iniciar();                    // activa el modo cristal (clase html.lg)
+  LiquidGlass.controles();                  // sliders, interruptores y piezas .glass.liquid
+  for (const el of document.querySelectorAll('.lg-cristal')) LiquidGlass.cristal(el, { contenido: el.id === 'widget', muelle: el.id !== 'ajustes' });
+
+  // la lente se arrastra con el muelle del cristal
+  const lente = document.getElementById('lente'), mu = lente._lgCristal.muelle;
+  let ag = null;
+  lente.addEventListener('pointerdown', (e) => { ag = { x: e.clientX - lente.offsetLeft, y: e.clientY - lente.offsetTop }; lente.setPointerCapture(e.pointerId); });
+  lente.addEventListener('pointermove', (e) => { if (!ag) return; lente.style.left = (e.clientX - ag.x) + 'px'; lente.style.top = (e.clientY - ag.y) + 'px'; mu.mover(e.clientX, e.clientY); });
+  lente.addEventListener('pointerup', () => { ag = null; });
+
+  // ajustes en vivo
+  document.getElementById('ajustes').addEventListener('input', (e) => {
+    const r = e.target; if (!r.dataset.k) return;
+    r.style.setProperty('--v', ((r.value - r.min) / (r.max - r.min) * 100) + '%');
+    LiquidGlass.ajustar({ [r.dataset.k]: r.value / r.dataset.div });
+  });
+  for (const r of document.querySelectorAll('input[type=range]')) r.style.setProperty('--v', ((r.value - r.min) / (r.max - r.min) * 100) + '%');
+  for (const s of document.querySelectorAll('.switch')) s.addEventListener('click', () => s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'));
+</script>
+</body>
+</html>

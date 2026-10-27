@@ -35,7 +35,7 @@ foreach ($d in $destinos) {
   New-Item -ItemType Directory -Path $copia | Out-Null
   Copy-Item "$d\*.js", "$d\*.ps1", "$d\package.json" $copia -ErrorAction SilentlyContinue
   Copy-Item "$d\ui" $copia -Recurse
-  Copy-Item "$nuevo\*.js", "$nuevo\*.ps1" $d -Force
+  Copy-Item "$nuevo\*.js", "$nuevo\*.ps1", "$nuevo\*.json" $d -Force
   Copy-Item "$nuevo\ui\*" "$d\ui" -Recurse -Force
 }
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

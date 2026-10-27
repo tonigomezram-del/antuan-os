@@ -200,3 +200,12 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Herramientas: ruido 1D/2D con octavas, `cordillera()`, `niebla()`, `pino()`, `campo()` (campo 2D a baja resolución), estrellas, viñeta y grano.
   - En el Centro salen por categorías y las miniaturas se pintan una por fotograma.
   - Revisión visual: `prueba-lg/fondos.html#N` (12 a partir del N).
+- **Versiones de Antuan** (desde la 1.2):
+  - `shell/version-antuan.json` lleva la versión, la fecha y la lista de novedades.
+  - Centro → Actualizaciones → tarjeta "Antuan" (`antuanActualizacion()` en centro.js y `ASKS['antuan.version']` en main.js) compara la versión instalada con la de GitHub. Si hay una nueva, la enseña con sus novedades y `antuan.actualizar` lanza el actualizador: en Linux `pkexec bash -c 'curl …/actualizar.sh | bash'`, en Windows `irm …/actualizar.ps1 | iex`.
+  - **Al publicar cambios:** sube `version` en `version-antuan.json` y apunta las novedades en `cambios`. Sin eso, los Antuan instalados no se enteran.
+  - Los actualizadores copian también los `*.json`.
+- Skill aparte `liquid-glass` (carpeta `liquid-glass/` del repositorio, segundo plugin del marketplace):
+  - Lleva el kit `liquid.js`, `liquid.css`, `liquid-kit.css`, `fondos.js` y `demo.html`, y las reglas de Toni.
+  - `LiquidGlass.cristal(el, opciones)` convierte cualquier elemento en el cristal de los widgets.
+  - Si cambias el motor, copia también ahí los archivos.

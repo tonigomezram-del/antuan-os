@@ -1,6 +1,6 @@
 {
   "name": "antuan-os",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Antuan OS: el sistema operativo y escritorio propio de Toni (sobre Debian 13). Incluye todo el código fuente y las instrucciones para reconstruir la ISO idéntica, instalarlo y seguir desarrollándolo.",
   "author": {
     "name": "Toni Gomez"

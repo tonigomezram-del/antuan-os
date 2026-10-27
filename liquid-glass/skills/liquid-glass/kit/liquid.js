@@ -1,0 +1,432 @@
+/* Liquid Glass de Antuan: refraccion real tipo iOS 26 sobre el fondo de pantalla.
+ * Por cada capa .wp (dock, bandeja...) se genera un mapa de desplazamiento con el perfil de un borde
+ * "squircle" convexo (ley de Snell, vidrio n=1.5) y un mapa especular del canto. Un filtro SVG desplaza el
+ * fondo con esos mapas, separando rojo, verde y azul con fuerzas distintas (aberracion cromatica), y
+ * suma el brillo del canto. Basado en el articulo de kube.io sobre el Liquid Glass de Apple.
+ */
+(() => {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg';
+  const MARGEN = 40;           // la capa del fondo sobresale 40 px (igual que .wp::before)
+  const N = 128;               // muestras del perfil del bisel
+  // Mismos valores que la demo de kube.io: bisel 30, grosor 150, refraccion 1.5, desenfoque 0.5, saturacion 1.3
+  const AJUSTES = { superficie: 'squircle', bisel: 22, grosor: 110, refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, especular: 0.9, saturacion: 1.3, tinte: 0.16, contenido: 0.4, lupa: 0.12, forma: 'redondo' };
+  // Ajustes del Centro (Personalizacion > Cristal liquido) -> valores del efecto. Por defecto, los de arriba.
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  function desdeConfig(c = {}) {
+    return {
+      superficie: SUPERFICIES[c.lgSuperficie] ? c.lgSuperficie : 'squircle', bisel: num(c.lgBisel, 22),
+      refraccion: num(c.lgRefraccion, 150) / 100, cromatica: num(c.lgCromatica, 6) / 100, grosor: num(c.lgGrosor, 110),
+      desenfoque: num(c.lgDesenfoque, 12) / 10, especular: num(c.lgBrillo, 90) / 100, tinte: num(c.lgTinte, 16) / 100,
+      contenido: num(c.lgContenido, 40) / 100, lupa: num(c.lgLupa, 12) / 100,
+      forma: c.lgForma === 'cuadrado' ? 'cuadrado' : 'redondo'
+    };
+  }
+
+  // Perfil del borde (como "Surface Type" de la demo): altura de la superficie de 0 (canto) a 1 (fin del bisel)
+  //  squircle: convexo suave, amplia lo de detras (el de iOS) · circulo: convexo redondo, curva mas fuerte
+  //  concavo: hundido, encoge lo de detras · labio: sube en el canto y se hunde despues (anillo)
+  const squircle = (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4);
+  const circulo = (x) => Math.sqrt(1 - Math.pow(1 - x, 2));
+  const suave = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const SUPERFICIES = {
+    squircle, circulo,
+    concavo: (x) => 1 - circulo(1 - x),
+    labio: (x) => squircle(Math.min(1, x * 2)) * (1 - 0.7 * suave(0.45, 1, x)) + 0.3 * suave(0.45, 1, x)
+  };
+
+  // Desplazamiento (en px) que sufre la luz en cada punto del bisel: un rayo vertical entra en una superficie
+  // inclinada y se tuerce segun Snell. Devuelve la tabla normalizada (0..1) y el maximo en px.
+  function perfil(bisel, grosor, superficie) {
+    const altura = SUPERFICIES[superficie] || squircle;
+    const n2 = 1.5, t = new Float32Array(N + 1);
+    let max = 0;
+    for (let i = 0; i <= N; i++) {
+      const x = Math.min(Math.max(i / N, 0.0005), 0.9995), dx = 0.0005;
+      const pendiente = (altura(Math.min(x + dx, 1)) - altura(Math.max(x - dx, 0))) / (2 * dx);
+      const incid = Math.atan(pendiente);                       // angulo entre el rayo vertical y la normal
+      const refr = Math.asin(Math.sin(incid) / n2);
+      const d = Math.tan(incid - refr) * (grosor + bisel * (1 - altura(x)));
+      t[i] = d; if (Math.abs(d) > max) max = Math.abs(d);   // en el concavo sale negativo: empuja hacia fuera
+    }
+    for (let i = 0; i <= N; i++) t[i] = max ? t[i] / max : 0;
+    return { tabla: t, max };
+  }
+
+  // Distancia al canto y normal hacia fuera de un rectangulo redondeado (w x h, radio r) en el punto (x, y)
+  function campo(x, y, w, h, r) {
+    const cx = x - w / 2, cy = y - h / 2, sx = Math.sign(cx) || 1, sy = Math.sign(cy) || 1;
+    const qx = Math.abs(cx) - (w / 2 - r), qy = Math.abs(cy) - (h / 2 - r);
+    if (qx > 0 && qy > 0) {
+      const l = Math.hypot(qx, qy) || 1;
+      return { d: r - l, nx: sx * qx / l, ny: sy * qy / l };
+    }
+    if (qx > qy) return { d: r - qx, nx: sx, ny: 0 };
+    return { d: r - qy, nx: 0, ny: sy };
+  }
+
+  function mapas(w, h, r, a) {
+    // El cristal escala con su tamano: los ajustes son para una pieza de 100 px de lado corto, y una mas grande
+    // (un widget) tiene el borde curvado y el grosor proporcionalmente mayores; no es uno pequeno estirado.
+    // Los controles (bolitas de sliders e interruptores) llevan sus medidas exactas (escalar: false).
+    const f = a.escalar === false ? 1 : Math.min(3, Math.max(0.6, Math.min(w, h) / 100));
+    const bisel = Math.max(4, Math.min(a.bisel * f, w / 2 - 1, h / 2 - 1));
+    const { tabla, max } = perfil(bisel, a.grosor * f, a.superficie);
+    const cd = document.createElement('canvas'), cs = document.createElement('canvas');
+    cd.width = cs.width = w; cd.height = cs.height = h;
+    const gd = cd.getContext('2d'), gs = cs.getContext('2d');
+    const id = gd.createImageData(w, h), is = gs.createImageData(w, h);
+    const L = { x: -0.6, y: -0.8 };             // luz arriba a la izquierda, como en iOS
+    // Desplazamiento en pixeles de cada punto: la curva del borde (Snell) mas el aumento de lupa de todo el
+    // cristal (lo de detras se ve mas grande y curvado por toda la superficie, como en la demo). El contenido
+    // no lleva lupa (el texto no se mueve de sitio).
+    const lupa = a.lupa > 0 && a.escalar !== false ? 1 - 1 / (1 + a.lupa) : 0;
+    const borde = max * a.refraccion / 2, cx = w / 2, cy = h / 2;
+    const des = new Float32Array(w * h * 2);
+    let mayor = 0.0001;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      // el campo se calcula con esquinas al menos tan redondas como el borde curvado: sin pliegues en diagonal
+      const c = campo(x + 0.5, y + 0.5, w, h, Math.min(Math.max(r, bisel), w / 2, h / 2));
+      if (c.d < 0) c.d = 0;   // las puntas de la esquina real, como el canto
+      let dx = -(x + 0.5 - cx) * lupa, dy = -(y + 0.5 - cy) * lupa;
+      if (c.d < bisel) {
+        // hacia dentro: la lente amplia lo que tiene debajo, como en iOS (y en la demo con backdrop-filter)
+        const m = tabla[Math.round((c.d / bisel) * N)] * borde;
+        dx -= c.nx * m; dy -= c.ny * m;
+      }
+      const k = (y * w + x) * 2; des[k] = dx; des[k + 1] = dy;
+      mayor = Math.max(mayor, Math.abs(dx), Math.abs(dy));
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4, k = (y * w + x) * 2;
+      id.data[o] = 128 + (des[k] / mayor) * 127; id.data[o + 1] = 128 + (des[k + 1] / mayor) * 127; id.data[o + 2] = 128; id.data[o + 3] = 255;
+      // brillo especular como en iOS: una linea fina y nitida en el canto, fuerte donde la normal mira a la
+      // luz (arriba a la izquierda) y a su opuesto (abajo a la derecha), casi nada en los lados; y un halo
+      // muy corto (4 px) solo en esas dos zonas
+      const e = campo(x + 0.5, y + 0.5, w, h, r);   // el brillo sigue la esquina real
+      if (e.d >= 0 && e.d < 4) {
+        const cara = Math.abs(e.nx * L.x + e.ny * L.y), foco = Math.pow(cara, 3);
+        const linea = e.d < 1.6 ? (0.1 + 0.9 * foco) * (1 - e.d / 1.6) : 0;
+        const halo = 0.22 * foco * Math.pow(1 - e.d / 4, 2);
+        const al = Math.min(1, linea + halo);
+        is.data[o] = is.data[o + 1] = is.data[o + 2] = 255; is.data[o + 3] = al * 255;
+      }
+    }
+    gd.putImageData(id, 0, 0); gs.putImageData(is, 0, 0);
+    return { desp: cd.toDataURL(), espec: cs.toDataURL(), escala: mayor * 2 };
+  }
+
+  let defs = null, cuenta = 0;
+  function contenedor() {
+    if (defs) return defs;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    defs = document.createElementNS(NS, 'defs'); svg.appendChild(defs);
+    document.body.appendChild(svg);
+    return defs;
+  }
+  const el = (tag, at, padre) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (padre) padre.appendChild(e); return e; };
+
+  // Filtro con aberracion cromatica: tres desplazamientos (R, G, B) con fuerzas un poco distintas
+  // modo 'lente' (dock, paneles): el brillo se suma en pantalla. modo 'control' (sliders, interruptores):
+  // como en la demo, el canto toma los colores de debajo muy saturados y encima va el brillo suave.
+  // cromatico: tres refracciones (R, G, B). Con el efecto cromatico casi a cero se hace una sola (3 veces menos trabajo)
+  function crearFiltro(idF, modo = 'lente', cromatico = true) {
+    const f = el('filter', { id: idF, x: '0', y: '0', width: '100%', height: '100%', 'color-interpolation-filters': 'sRGB', filterUnits: 'objectBoundingBox', primitiveUnits: 'userSpaceOnUse' }, contenedor());
+    el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '0.5', result: 'b', 'data-k': 'blur' }, f);
+    el('feImage', { result: 'm', preserveAspectRatio: 'none', 'data-k': 'desp' }, f);
+    const canales = [['r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'], ['bl', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0']];
+    if (cromatico) {
+      for (const [c, m] of canales) {
+        el('feDisplacementMap', { in: 'b', in2: 'm', xChannelSelector: 'R', yChannelSelector: 'G', result: 'd' + c, 'data-k': 'esc-' + c }, f);
+        el('feColorMatrix', { in: 'd' + c, type: 'matrix', values: m, result: 'c' + c }, f);
+      }
+      el('feBlend', { in: 'cr', in2: 'cg', mode: 'screen', result: 'rg' }, f);
+      el('feBlend', { in: 'rg', in2: 'cbl', mode: 'screen', result: 'disp' }, f);
+    } else {
+      el('feDisplacementMap', { in: 'b', in2: 'm', xChannelSelector: 'R', yChannelSelector: 'G', result: 'disp', 'data-k': 'esc-g' }, f);
+    }
+    el('feColorMatrix', { in: 'disp', type: 'saturate', values: '1.3', result: 'sat', 'data-k': 'sat' }, f);
+    el('feImage', { result: 'e', preserveAspectRatio: 'none', 'data-k': 'espec' }, f);
+    const ct = el('feComponentTransfer', { in: 'e', result: 'ef' }, f);
+    el('feFuncA', { type: 'linear', slope: '1', 'data-k': 'alfa' }, ct);
+    if (modo === 'contenido') {
+      el('feBlend', { in: 'disp', in2: 'disp', mode: 'normal' }, f);
+    } else if (modo === 'control') {
+      el('feComposite', { in: 'sat', in2: 'e', operator: 'in', result: 'borde' }, f);
+      el('feBlend', { in: 'borde', in2: 'disp', mode: 'normal', result: 'conBorde' }, f);
+      el('feBlend', { in: 'ef', in2: 'conBorde', mode: 'normal' }, f);
+    } else {
+      el('feBlend', { in: 'ef', in2: 'sat', mode: 'screen' }, f);
+    }
+    return f;
+  }
+
+  const capas = new Set();
+  // Cada tipo de pieza tiene su propio diseno de cristal (como en iOS): multiplica los ajustes del Centro.
+  //  gota (iconos): borde muy curvado, sin lupa, poca refraccion · tarjeta: grande, cristal mas fino y plano
+  //  widget: el cristal grueso con lupa (el de la vista previa) · dock/bandeja: borde algo mas ancho, lupa suave
+  const PIEZAS = {
+    widget: {},
+    tarjeta: {},   // el mismo cristal que los widgets (Toni: la configuracion se aplica a todo por igual)
+    gota: { bisel: 1.5, grosor: 0.5, lupa: 0, refraccion: 0.7, especular: 1.15 },
+    dock: {}
+  };
+  function conPieza(a, pieza) {
+    const p = PIEZAS[pieza]; if (!p) return a;
+    const b = { ...a }; for (const k in p) b[k] = a[k] * p[k];
+    return b;
+  }
+
+  function actualizar(c, rapido = false) {
+    // offsetWidth: tamano sin el scale del muelle (el mapa es el de la pieza, no el del rebote)
+    const w = Math.round(c.wp.offsetWidth), h = Math.round(c.wp.offsetHeight);
+    if (w < 8 || h < 8) return;
+    const radio = Math.min(parseFloat(getComputedStyle(c.wp).borderTopLeftRadius) || 0, w / 2, h / 2);
+    const k = rapido ? 0.5 : 1;
+    const clave = `${w}x${h}r${radio}x${k}`;
+    if (clave === c.clave || (rapido && c.clave.startsWith(`${w}x${h}r${radio}x`))) return;
+    c.clave = clave;
+    const a = conPieza(AJUSTES, 'dock'), q = (k2) => c.filtro.querySelector(`[data-k="${k2}"]`);
+    const m = mapas(Math.max(8, Math.round(w * k)), Math.max(8, Math.round(h * k)), radio * k, { ...a, bisel: a.bisel * k, grosor: a.grosor * k });
+    m.escala /= k;   // el mapa pequeno se estira a la pieza: el desplazamiento vuelve a pixeles reales
+    for (const k of ['desp', 'espec']) {
+      const im = q(k);
+      im.setAttribute('href', m[k]); im.setAttribute('x', MARGEN); im.setAttribute('y', MARGEN);
+      im.setAttribute('width', w); im.setAttribute('height', h);
+    }
+    q('esc-r')?.setAttribute('scale', (m.escala * (1 + a.cromatica)).toFixed(2));
+    q('esc-g').setAttribute('scale', m.escala.toFixed(2));
+    q('esc-bl')?.setAttribute('scale', (m.escala * (1 - a.cromatica)).toFixed(2));
+    q('blur').setAttribute('stdDeviation', a.desenfoque);
+    q('sat').setAttribute('values', a.saturacion);
+    q('alfa').setAttribute('slope', a.especular);
+  }
+  function seguirTamano(c) {
+    let marco = 0, espera = 0;
+    new ResizeObserver(() => {
+      if (!marco) marco = requestAnimationFrame(() => { marco = 0; actualizar(c, true); });
+      clearTimeout(espera); espera = setTimeout(() => actualizar(c), 180);
+    }).observe(c.wp);
+  }
+
+  function engancha(wp) {
+    if (wp._liquid) return;
+    const idF = 'antuan-lg-' + (++cuenta);
+    const lente = document.createElement('div');
+    lente.className = 'wp-lente';
+    lente.style.filter = `url(#${idF})`;
+    wp.appendChild(lente);
+    const c = { wp, lente, filtro: crearFiltro(idF), clave: '' };
+    wp._liquid = c; capas.add(c);
+    seguirTamano(c);
+    actualizar(c);
+  }
+
+  // Filtro para un tamano fijo (lentes con backdrop-filter: sliders, interruptores...): se cachea por tamano
+  const fijos = new Map();
+  function filtroFijo(w, h, r, extra = {}, modo = 'control') {
+    const { pieza, ...resto } = extra;
+    const a = conPieza({ ...AJUSTES, ...resto }, pieza), clave = [w, h, r, modo, JSON.stringify(a)].join('|');
+    if (fijos.has(clave)) return fijos.get(clave);
+    // solo la lente escala con el tamano; los controles y el contenido mantienen un borde fino (el texto se lee)
+    const idF = 'antuan-lgf-' + (++cuenta), f = crearFiltro(idF, modo, a.cromatica >= 0.015), m = mapas(w, h, r, modo === 'lente' ? a : { ...a, escalar: false }), q = (k) => f.querySelector(`[data-k="${k}"]`);
+    for (const k of ['desp', 'espec']) { const im = q(k); im.setAttribute('href', m[k]); im.setAttribute('x', 0); im.setAttribute('y', 0); im.setAttribute('width', w); im.setAttribute('height', h); }
+    const e = modo === 'contenido' ? Math.min(m.escala, a.bisel) * a.contenido : m.escala;
+    q('esc-r')?.setAttribute('scale', (e * (1 + a.cromatica)).toFixed(2));
+    q('esc-g').setAttribute('scale', e.toFixed(2));
+    q('esc-bl')?.setAttribute('scale', (e * (1 - a.cromatica)).toFixed(2));
+    q('blur').setAttribute('stdDeviation', modo === 'contenido' ? 0 : a.desenfoque); q('sat').setAttribute('values', a.saturacion); q('alfa').setAttribute('slope', a.especular);
+    fijos.set(clave, idF);
+    return idF;
+  }
+
+  /* ---------- Muelle: la fisica de la lente de la demo ----------
+   * Al tocar crece con rebote; mientras se mueve se estira en la direccion del movimiento (mas cuanto mas
+   * rapido, medido en pantalla) y la sombra se queda atras; al soltar vuelve a su tamano oscilando.
+   * Tres muelles amortiguados (tamano, posicion x y estiramiento) integrados en cada fotograma. */
+  const reducido = () => document.documentElement.classList.contains('reduce-motion');
+  function muelle(el, o) {
+    const est = o.estira ?? 0.00045;
+    const m = { s: o.reposo, vs: 0, S: o.reposo, x: o.x || 0, vx: 0, X: o.x || 0, ex: 0, vex: 0, ey: 0, vey: 0, EX: 0, EY: 0, px: null, py: null, t: 0, vivo: false, agarrado: false, puntero: null };
+    function pinta() {
+      // Estiramiento solo en un eje (el del movimiento dominante): a los lados o arriba/abajo, nunca en diagonal
+      const ax = Math.abs(m.ex), ay = Math.abs(m.ey), mag = Math.min(o.prop === 'scale' ? 0.08 : 0.13, Math.max(ax, ay));
+      const sx = m.s * (ax >= ay ? 1 + mag : 1 - mag * 0.55), sy = m.s * (ax >= ay ? 1 - mag * 0.55 : 1 + mag);
+      if (o.prop === 'scale') el.style.scale = `${sx.toFixed(4)} ${sy.toFixed(4)}`;
+      else el.style.transform = `translateX(${m.x.toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+      el.style.setProperty('--lg-dx', (-m.ex * 22).toFixed(2) + 'px');
+      el.style.setProperty('--lg-dy', (-m.ey * 22).toFixed(2) + 'px');
+    }
+    function paso(t) {
+      const dt = m.t ? Math.min(0.032, (t - m.t) / 1000) : 0.016; m.t = t;
+      // Velocidad: la del puntero si quien arrastra la da (sin medir la pagina: no fuerza a recalcular el diseno);
+      // si no, se mide la pieza en pantalla
+      if (!m.puntero || !m.agarrado) {
+        const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (m.px !== null && dt > 0) {
+          m.EX = m.EX * 0.6 + ((cx - m.px) / dt) * est * 0.4;
+          m.EY = m.EY * 0.6 + ((cy - m.py) / dt) * est * 0.4;
+        }
+        m.px = cx; m.py = cy;
+      }
+      m.EX *= 0.85; m.EY *= 0.85;
+      m.vs += ((m.S - m.s) * 420 - m.vs * 20) * dt; m.s += m.vs * dt;
+      m.vx += ((m.X - m.x) * 520 - m.vx * 24) * dt; m.x += m.vx * dt;
+      m.vex += ((m.EX - m.ex) * 420 - m.vex * 26) * dt; m.ex += m.vex * dt;
+      m.vey += ((m.EY - m.ey) * 420 - m.vey * 26) * dt; m.ey += m.vey * dt;
+      pinta();
+      const quieto = !m.agarrado && Math.abs(m.S - m.s) < 1e-3 && Math.abs(m.vs) < 1e-2 && Math.abs(m.X - m.x) < 0.05 && Math.abs(m.vx) < 0.1
+        && Math.hypot(m.ex, m.ey, m.vex, m.vey, m.EX, m.EY) < 2e-3;
+      if (quieto) { m.vivo = false; m.t = 0; m.px = null; m.puntero = null; m.ex = m.ey = m.vex = m.vey = 0; pinta(); return; }
+      requestAnimationFrame(paso);
+    }
+    const arranca = () => { if (reducido()) { m.s = m.S; m.x = m.X; pinta(); return; } if (!m.vivo) { m.vivo = true; requestAnimationFrame(paso); } };
+    pinta();
+    return {
+      tocar() { m.agarrado = true; m.S = o.activo; arranca(); },
+      soltar() { m.agarrado = false; m.S = o.reposo; m.puntero = null; arranca(); },
+      ir(x, conSalto = true) { m.X = x; if (!conSalto) { m.x = x; m.vx = 0; pinta(); } else arranca(); },
+      // mover(): la pieza se ha movido. Con (x, y) del puntero, la velocidad sale de ahi (lo mas barato y fluido)
+      mover(x, y) {
+        if (typeof x === 'number') {
+          const t = performance.now(), p = m.puntero;
+          if (p && t > p.t) {
+            const dt = Math.max(0.008, (t - p.t) / 1000);
+            m.EX = m.EX * 0.5 + ((x - p.x) / dt) * est * 0.5;
+            m.EY = m.EY * 0.5 + ((y - p.y) / dt) * est * 0.5;
+          }
+          m.puntero = { x, y, t };
+        }
+        arranca();
+      }
+    };
+  }
+
+
+  /* ---------- Controles liquidos: sliders e interruptores como en iOS 26 ---------- */
+  // Slider: la bolita blanca (pildora) se convierte al pulsar en una lente de cristal que refracta la barra.
+  const TW = 30, TH = 19;            // pildora en reposo; pulsada crece x1.6
+  function sliderLiquido(inp) {
+    if (inp._lg || inp.closest('.lg-range')) return;
+    inp._lg = true;
+    const caja = document.createElement('span'); caja.className = 'lg-range';
+    inp.parentNode.insertBefore(caja, inp); caja.appendChild(inp);
+    const bola = document.createElement('span'); bola.className = 'lg-thumb'; caja.appendChild(bola);
+    const id = filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, desenfoque: 0, especular: 0.4, saturacion: 7 });
+    bola.style.setProperty('--lg-filtro', `url(#${id})`);
+    alCambiar(() => bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(Math.round(TW * 1.6), Math.round(TH * 1.6), Math.round(TH * 0.8), { bisel: 10, grosor: 40, desenfoque: 0, especular: 0.4, saturacion: 7 })})`));
+    const mu = muelle(bola, { reposo: 0.625, activo: 1, estira: 0.0006 });
+    const sitio = () => {
+      const min = +inp.min || 0, max = inp.max === '' ? 100 : +inp.max, v = (+inp.value - min) / ((max - min) || 1);
+      const w = inp.clientWidth; bola.style.left = (TW / 2 + v * Math.max(0, w - TW)) + 'px';
+      mu.mover();
+    };
+    const on = () => { caja.classList.add('activo'); mu.tocar(); sitio(); };
+    const off = () => { if (!caja.classList.contains('activo')) return; caja.classList.remove('activo'); mu.soltar(); };
+    inp.addEventListener('input', sitio);
+    inp.addEventListener('pointerdown', on);
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
+    new ResizeObserver(sitio).observe(inp);
+    // los valores que se ponen desde el codigo (volumen, brillo...) tambien mueven la bola
+    const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    Object.defineProperty(inp, 'value', { get() { return d.get.call(this); }, set(v) { d.set.call(this, v); sitio(); } });
+    sitio();
+  }
+  // Interruptor: la bola (elemento propio) crece al pulsar y se vuelve cristal; al cambiar salta con muelle
+  function interruptorLiquido(sw) {
+    if (sw._lg) return; sw._lg = true;
+    const opc = { bisel: 9, grosor: 34, desenfoque: 0.2, especular: 0.5, saturacion: 6 };
+    const bola = document.createElement('span'); bola.className = 'lg-knob';
+    bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(39, 30, 15, opc)})`);
+    alCambiar(() => bola.style.setProperty('--lg-filtro', `url(#${filtroFijo(39, 30, 15, opc)})`));
+    sw.appendChild(bola);
+    const destino = () => (sw.getAttribute('aria-checked') === 'true' ? 14 : 0);
+    const mu = muelle(bola, { reposo: 0.667, activo: 1, x: destino(), estira: 0.0007 });
+    new MutationObserver(() => mu.ir(destino())).observe(sw, { attributes: true, attributeFilter: ['aria-checked'] });
+    const off = () => { if (!sw.classList.contains('lg-pulsado')) return; sw.classList.remove('lg-pulsado'); mu.soltar(); };
+    sw.addEventListener('pointerdown', () => { sw.classList.add('lg-pulsado'); mu.tocar(); });
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
+  }
+  // Pulsar un cristal (dock, bandeja, widgets): crece mientras se aprieta y rebota al soltar; si se arrastra,
+  // se estira con la velocidad. Devuelve el muelle para que quien mueva la pieza llame a mover().
+  function gelatina(el, o = {}) {
+    if (el._lgGel) return el._lgGel;
+    const mu = muelle(el, { reposo: 1, activo: o.activo ?? 1.035, estira: o.estira ?? 0.0003, prop: o.prop ?? 'scale' });
+    el._lgGel = mu;
+    let apretado = false;
+    el.addEventListener('pointerdown', (e) => { if (el.id === 'dock' && document.documentElement.classList.contains('dock-barra')) return; if (e.button !== 0 || (o.soloFondo && e.target.closest('button, input, a, [role=button], .cell'))) return; apretado = true; mu.tocar(); });
+    const off = () => { if (!apretado) return; apretado = false; mu.soltar(); };
+    window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
+    return mu;
+  }
+  // Piezas solidas (paneles, tarjetas): mismo cristal pero opaco; al apretar su fondo hacen el rebote corto
+  function solido(el) {
+    if (el._lgSol) return; el._lgSol = true;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || reducido() || e.target.closest('button, input, a, select, textarea, [role=button], .cell, .dock-item')) return;
+      el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.012, 0.988)', offset: 0.3 }, { transform: 'scale(0.997, 1.004)', offset: 0.65 }, { transform: 'scale(1)' }],
+        { duration: 480, easing: 'cubic-bezier(.22,1,.36,1)', composite: 'add' });
+    });
+  }
+  function controles(raiz = document) {
+    raiz.querySelectorAll('input[type=range]').forEach(sliderLiquido);
+    raiz.querySelectorAll('.switch').forEach(interruptorLiquido);
+    raiz.querySelectorAll('.glass.liquid, #tray').forEach((el) => gelatina(el, { activo: el.id === 'dock' ? 1.025 : 1.035 }));
+    raiz.querySelectorAll('.panel.glass, .group').forEach(solido);
+  }
+  let vigia = null;
+  function vigilarControles() {
+    controles();
+    if (vigia) return;
+    let pendiente = false;   // como mucho una revision por fotograma (el reloj y el dock cambian sin parar)
+    vigia = new MutationObserver(() => { if (pendiente) return; pendiente = true; requestAnimationFrame(() => { pendiente = false; controles(); }); });
+    vigia.observe(document.body, { childList: true, subtree: true });
+  }
+
+  const oyentes = new Set();
+  function alCambiar(fn) { oyentes.add(fn); }
+
+  // Convierte cualquier elemento en cristal liquido como los widgets: lente a su medida (se rehace cuando cambia
+  // de tamano y cuando cambian los ajustes), y opcionalmente el contenido doblado y el muelle al apretarlo.
+  //   LiquidGlass.cristal(el, { radio, contenido: true, muelle: true, pieza: 'widget' })
+  function cristal(el, o = {}) {
+    if (el._lgCristal) return el._lgCristal;
+    el.classList.add('lg-cristal');
+    const pon = () => {
+      const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+      if (w < 8 || h < 8) return;
+      const r = o.radio ?? (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0);
+      el.style.backdropFilter = `url(#${filtroFijo(w, h, Math.min(r, w / 2, h / 2), { pieza: o.pieza || 'widget' }, 'lente')})`;
+      if (o.contenido && el.firstElementChild && AJUSTES.contenido > 0) el.firstElementChild.style.filter = `url(#${filtroFijo(w, h, Math.min(r, w / 2, h / 2), {}, 'contenido')})`;
+    };
+    let espera = 0;
+    new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(pon, 160); }).observe(el);
+    alCambiar(pon); pon();
+    const mu = o.muelle === false ? null : muelle(el, { reposo: 1, activo: o.activo ?? 1.04, estira: 0.00035 });
+    if (mu) {
+      el.addEventListener('pointerdown', () => mu.tocar());
+      window.addEventListener('pointerup', () => mu.soltar()); window.addEventListener('pointercancel', () => mu.soltar());
+    }
+    return (el._lgCristal = { actualizar: pon, muelle: mu });
+  }
+
+  window.LiquidGlass = {
+    filtroFijo, muelle, gelatina, cristal, controles: vigilarControles,
+    ajustes: AJUSTES,
+    iniciar(sel = '.wp') { document.documentElement.classList.add('lg'); document.querySelectorAll(sel).forEach(engancha); },
+    desdeConfig, alCambiar,
+    // nuevos ajustes: se rehacen las capas del fondo y avisan a quien tenga filtros a medida (widgets, controles)
+    ajustar(nuevos) {
+      const antes = JSON.stringify(AJUSTES);
+      Object.assign(AJUSTES, nuevos);
+      document.documentElement.style.setProperty('--lg-tinte', AJUSTES.tinte);
+      document.documentElement.classList.toggle('lg-cuadrado', AJUSTES.forma === 'cuadrado');
+      if (JSON.stringify(AJUSTES) === antes) return;
+      for (const c of capas) { c.clave = ''; actualizar(c); }
+      for (const fn of oyentes) { try { fn(AJUSTES); } catch { } }
+    },
+    apagar() { document.documentElement.classList.remove('lg'); }
+  };
+})();
