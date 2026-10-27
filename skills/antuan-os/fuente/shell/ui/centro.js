@@ -422,7 +422,10 @@ const SECTIONS = {
               ['lgContenido', 'Afectar al contenido', 'El texto y los iconos de dentro también se doblan', 0, 100, 40]]
             .map(([k, n, d, mi, ma, def]) => `<div class="row"><div class="lbl"><b>${n}</b><span>${d}</span></div><input type="range" min="${mi}" max="${ma}" value="${C[k] ?? def}" data-k="${k}"></div>`).join('')}
           <div class="row"><div class="lbl"><b>Valores de fábrica</b></div><button class="btn" data-lg-reset>Restablecer</button></div></div>
-        <div class="card section"><h3>Fondos para cristal líquido <span class="r faint">Con formas y contraste: el cristal se luce</span></h3><div class="walls" id="fondosLG">${(window.FondosAntuan ? FondosAntuan.estilos : []).map((n) => `<button class="wall" data-fondo="${n}">${n === 'Oceano' ? 'Océano' : n}</button>`).join('')}</div></div>
+        <div class="card section"><h3>Fondos para cristal líquido <span class="r faint">Con formas y contraste: el cristal se luce</span></h3>${(() => {
+          const cat = window.FondosAntuan ? FondosAntuan.catalogo : [], grupos = [...new Set(cat.map((f) => f.categoria))];
+          return grupos.map((gr) => `<div class="fondos-cat">${gr}</div><div class="walls fondos-lg">${cat.filter((f) => f.categoria === gr).map((f) => `<button class="wall" data-fondo="${f.id}" title="${f.nombre}"><span>${f.nombre.replace(/^Cintas /, '')}</span></button>`).join('')}</div>`).join('');
+        })()}</div>
         <div class="card section"><h3>Fondo de pantalla Antuan</h3><div class="walls">${WALLS.map(([n, a, b, c]) => `<button class="wall" data-wall="${a},${b},${c}" style="background:${wallCss(a, b, c)}">${n}</button>`).join('')}</div></div>
         <div class="card section"><h3>Escritorio y sonido</h3>
           <div class="row"><div class="lbl"><b>Escritorio Antuan</b><span>Iconos organizados, reloj y widgets</span></div>${sw(C.desktop !== false, 'data-b="desktop"')}</div>
@@ -435,7 +438,14 @@ const SECTIONS = {
       $$('#pane input[type=range]').forEach(paint);
       vistaLiquida();
       // miniaturas de los fondos para cristal liquido
-      for (const b of $$('[data-fondo]')) b.style.background = `center/cover url(${FondosAntuan.pintar(b.dataset.fondo, 384, 216).toDataURL()})`;
+      // miniaturas de los fondos: una por fotograma (son muchas y el Centro no se queda congelado)
+      const pendientes = $$('[data-fondo]');
+      const siguiente = () => {
+        const b = pendientes.shift(); if (!b || !b.isConnected) return;
+        b.style.background = `center/cover url(${FondosAntuan.pintar(b.dataset.fondo, 384, 216).toDataURL('image/jpeg', 0.85)})`;
+        requestAnimationFrame(siguiente);
+      };
+      requestAnimationFrame(siguiente);
       pane.addEventListener('click', async (e) => {
         const th = e.target.closest('[data-theme]');
         if (th) {

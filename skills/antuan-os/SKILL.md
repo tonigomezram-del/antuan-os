@@ -192,3 +192,11 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Prueba: `ESTILO=barra node prueba-lg/hacer-dock.js`.
   - Estilos del dock: Líquido, Barra, Gota (experimento) y Clásico.
   - La Gota aproxima la lente con un mapa sacado de la silueta, porque `mapas()` solo hace rectángulos redondeados.
+- Colección de fondos (`ui/fondos.js`, `FondosAntuan.catalogo` con `id`, `nombre` y `categoria`), todos generados en el PC con semilla fija:
+  - **Paisajes:** montañas al atardecer, noche en la montaña, aurora boreal, dunas, océano de noche, lago al amanecer, bosque con niebla y ciudad al anochecer.
+  - **Espacio:** planeta con anillos, nebulosa y eclipse.
+  - **Minimalistas:** orbes, arcos, topografía, ondas, Bauhaus, colinas, prismas y metal líquido.
+  - **Cintas:** Brasa, Aurora, Océano, Lavanda y Bosque.
+  - Herramientas: ruido 1D/2D con octavas, `cordillera()`, `niebla()`, `pino()`, `campo()` (campo 2D a baja resolución), estrellas, viñeta y grano.
+  - En el Centro salen por categorías y las miniaturas se pintan una por fotograma.
+  - Revisión visual: `prueba-lg/fondos.html#N` (12 a partir del N).
