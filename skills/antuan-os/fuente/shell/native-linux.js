@@ -131,11 +131,12 @@ function listWindows(ownPids = []) {
     const m = /^(0x[0-9a-f]+)\s+(-?\d+)\s+(\d+)\s+(\S+)\s+\S+\s+(.*)$/i.exec(line.trim());
     if (!m) continue;
     const [, hex, desk, pid, cls, title] = m;
-    if (desk === '-1' || SKIP_CLASS.test(cls) || ownPids.includes(+pid)) continue;
+    const web = /\.AntuanWeb$/.test(cls);   // apps web de la Tienda (Claude, ChatGPT...): son de Antuan pero van en la barra
+    if (desk === '-1' || SKIP_CLASS.test(cls) || (ownPids.includes(+pid) && !web)) continue;
     const st = stateOf(hex);
     if (!st.normal) continue;
     const key = hexToKey(hex);
-    out.push({ id: key, title: title || cls.split('.').pop(), cls, exe: exeOf(+pid) || cls, minimized: st.hidden, active: key === act });
+    out.push({ id: key, title: title || cls.split('.').pop(), cls, exe: web ? 'web:' + title : (exeOf(+pid) || cls), minimized: st.hidden, active: key === act });
   }
   return out;
 }

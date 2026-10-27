@@ -82,7 +82,14 @@ function ventana(a, url, padre) {
   w.setMenuBarVisibility(false);
   const ico = path.join(DIR_ICONOS, a.id + '.png');
   if (fs.existsSync(ico)) try { w.setIcon(ico); } catch { }
-  w.once('ready-to-show', () => { w.show(); w.focus(); });
+  // En Linux, otra clase de ventana antes de mostrarla: si no, Openbox le quita el marco (como a Antuan) y la barra la esconde
+  w.once('ready-to-show', () => {
+    if (process.platform === 'linux') try {
+      const xid = w.getNativeWindowHandle().readUInt32LE(0);
+      require('child_process').spawnSync('xdotool', ['set_window', '--classname', 'antuan-web', '--class', 'AntuanWeb', String(xid)], { timeout: 1500 });
+    } catch { }
+    w.show(); w.focus();
+  });
   // Ventanas emergentes (inicio de sesion con Google/Apple) dentro de la misma sesion; los enlaces de otras webs, al navegador
   const base = new URL(a.fuentes.web).hostname.split('.').slice(-2).join('.');
   w.webContents.setWindowOpenHandler(({ url: u, disposition }) => {
