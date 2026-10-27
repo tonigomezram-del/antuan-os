@@ -4,7 +4,7 @@ const ui = path.join(__dirname, '..', 'UmbraOS', 'shell', 'ui');
 let s = fs.readFileSync(path.join(ui, 'index.html'), 'utf8');
 s = s.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '');
 s = s.replace(/(src|href)="([^":]+\.(js|css))"/g, '$1="../UmbraOS/shell/ui/$2"');
-const cfg = Object.assign(JSON.parse(fs.readFileSync(path.join(process.env.APPDATA, 'Antuan', 'config.json'), 'utf8')), { dockEstilo: 'gota', edge: 'bottom' });
+const cfg = Object.assign(JSON.parse(fs.readFileSync(path.join(process.env.APPDATA, 'Antuan', 'config.json'), 'utf8')), { dockEstilo: process.env.ESTILO || 'gota', edge: 'bottom' });
 delete cfg.gotaPos;
 const glifos = ['folder', 'globe', 'code', 'chat', 'music', 'game', 'terminal', 'bag', 'note'];
 const catalog = glifos.map((g, i) => ({ id: 'a' + i, name: 'App ' + i, kind: 'desktop', glyph: g, hue: i * 40 }));

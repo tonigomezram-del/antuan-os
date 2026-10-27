@@ -183,3 +183,12 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Su mapa sale de la silueta: desenfoque corto para el canto y largo para la lupa; la pendiente da la dirección; el desplazamiento se calcula en píxeles como en `mapas()`.
   - En movimiento, el mapa se desplaza con la gota (`moverMapa`, atributos x/y del `feImage`). Solo se recalcula al doblar una esquina (cada 150 ms como mucho, a 1/6) y al parar (a 1/3: unos 50 ms).
   - Ojo: en la ventana oculta de `prueba-lg/app` los fotogramas caen a 1 por segundo al moverse; es cosa de la prueba, no de la gota (en pantalla real va bien).
+- Dock "Barra" (`dockEstilo: 'barra'`), como la de Windows 11:
+  - Recta, de lado a lado, fija abajo, con los iconos centrados.
+  - La bandeja va integrada a la derecha, sin cristal propio.
+  - Sin arrastre, sin ampliación, sin flechas y sin el muelle al apretar. Fuerza `edge: 'bottom'`.
+  - Reserva `dockSize + 14` px (sin margen) en `reserveWorkArea`.
+  - Su cristal es exactamente la lente de los widgets (capa `.wp` con `mapas()` sobre el rectángulo de radio 0).
+  - Prueba: `ESTILO=barra node prueba-lg/hacer-dock.js`.
+  - Estilos del dock: Líquido, Barra, Gota (experimento) y Clásico.
+  - La Gota aproxima la lente con un mapa sacado de la silueta, porque `mapas()` solo hace rectángulos redondeados.

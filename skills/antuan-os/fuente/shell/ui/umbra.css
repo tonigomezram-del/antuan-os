@@ -388,3 +388,19 @@ html.dock-liquido .dock-item:hover, html.dock-liquido .dock-item.focused { backg
 #gotaCapa .gota-vidrio::after { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16)); }
 #gotaCapa .gota-forma { fill: none; }
 #gotaCapa .gota-brillo { stroke-width: 1.2; }
+
+/* ---------- Dock "Barra" (como la de Windows 11): recta, de lado a lado, fija abajo, iconos centrados ----------
+   El cristal es exactamente el de los widgets (la misma lente de liquid.js sobre el rectangulo de la barra) */
+html.dock-barra #dock { left: 0 !important; right: 0; top: auto !important; bottom: 0; transform: none !important; scale: none !important;
+  width: 100vw; height: calc(var(--dock-size) + 14px); padding: 0 220px; border-radius: 0 !important; justify-content: center; gap: 6px; }
+html.dock-barra #dock .dock-group { gap: 6px; }
+html.dock-barra #dock .dock-sep { height: 24px; margin: 0 4px; }
+html.dock-barra #dock .dock-item { width: calc(var(--dock-size) + 2px); height: calc(var(--dock-size) + 2px); }
+html.dock-barra #dock .dock-item .tile { width: 78%; height: 78%; }
+html.dock-barra #dock .dock-item .dot { bottom: 1px; }
+html.dock-barra .edge-hint { display: none; }
+/* la bandeja se integra en la barra, a la derecha, sin cristal propio */
+html.dock-barra #tray { left: auto !important; top: auto !important; right: 8px; bottom: 7px; transform: none !important;
+  height: var(--dock-size); padding: 0 6px; background: none !important; box-shadow: none !important; z-index: 51; }
+html.dock-barra #tray::before, html.dock-barra #tray .wp { display: none !important; }
+html.dock-barra #tray .tray-btn:hover { background: rgba(255,255,255,.08); }

@@ -52,7 +52,8 @@ const ownPids = () => [process.pid, ...app.getAppMetrics().map((m) => m.pid)];
 // ---------------------------------------------------------------- Area reservada para el dock
 function reserveWorkArea() {
   const d = screen.getPrimaryDisplay();
-  const thick = config.dockSize + 14 + 24; // dock + relleno + margenes
+  // la Barra (estilo Windows 11) va pegada abajo sin margenes; el resto de docks flotan con margen
+  const thick = config.dockEstilo === 'barra' ? config.dockSize + 14 : config.dockSize + 14 + 24;
   const b = d.bounds;
   // El trozo de borde que ocupa el dock, en pixeles fisicos.
   const strip = { ...b };
@@ -830,7 +831,7 @@ ipcMain.on('config', (_, patch) => {
   Object.assign(config, patch); saveConfig();
   // Todas las ventanas de Antuan se enteran del cambio (dock, escritorio, Centro).
   for (const w of [win, centro]) if (w && !w.isDestroyed() && w.webContents !== _.sender) w.webContents.send('config-changed', patch);
-  if (edgeChanged || 'dockSize' in patch) reserveWorkArea();
+  if (edgeChanged || 'dockSize' in patch || 'dockEstilo' in patch) reserveWorkArea();
   if (taskbarChanged) applyShellMode();
   if ('desktop' in patch) { if (patch.desktop && !desk) createDesktop(); if (!patch.desktop && desk) desk.destroy(); }
   sendDesktop('config', config);

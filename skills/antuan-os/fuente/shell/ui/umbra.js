@@ -30,6 +30,8 @@ function apply() {
   root.style.setProperty('--dock-size', S.dockSize + 'px');
   const dockAntes = root.classList.contains('dock-liquido');
   root.classList.toggle('dock-liquido', (S.dockEstilo || 'liquido') !== 'clasico');
+  root.classList.toggle('dock-barra', S.dockEstilo === 'barra');
+  if (S.dockEstilo === 'barra' && S.edge !== 'bottom') { S.edge = 'bottom'; U.config({ edge: 'bottom' }); }   // la Barra siempre va abajo
   if (window.GotaDock) GotaDock.aplicar();
   if (dockAntes !== root.classList.contains('dock-liquido')) requestAnimationFrame(() => { try { layout(); } catch { } });   // cambia el tamano del dock
   // Liquid Glass tipo iOS en el dock y la bandeja (con alto contraste se queda el cristal opaco)
@@ -235,6 +237,7 @@ function layout() {
   dock.classList.toggle('vertical', vert); tray.classList.toggle('vertical', vert);
   const gota = window.GotaDock && GotaDock.activa();
   if (gota) dock.classList.remove('vertical');
+  else if (root.classList.contains('dock-barra')) { dock.classList.remove('vertical'); tray.classList.remove('vertical'); followWp(); return; }
   else if (!drag || !drag.moved) place(dock, a.d);
   const crowded = vert
     ? dock.offsetHeight / 2 + tray.offsetHeight + GAP * 3 > innerHeight / 2
@@ -252,11 +255,11 @@ function dockTo(edge) {
 }
 addEventListener('resize', layout);
 U.on('layout', layout);
-U.on('edge', (e) => { if (window.GotaDock && GotaDock.activa()) GotaDock.flecha(e); else set({ edge: e }); });
+U.on('edge', (e) => { if (S.dockEstilo === 'barra') return; if (window.GotaDock && GotaDock.activa()) GotaDock.flecha(e); else set({ edge: e }); });
 
 /* Arrastre con anclaje magnetico */
 let drag = null, suppressClick = false, marcoDrag = 0;
-dock.addEventListener('pointerdown', (e) => { if (window.GotaDock && GotaDock.activa()) return; if (e.button === 0) drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; });
+dock.addEventListener('pointerdown', (e) => { if ((window.GotaDock && GotaDock.activa()) || S.dockEstilo === 'barra') return; if (e.button === 0) drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; });
 // El raton manda muchos eventos por fotograma: se guarda el ultimo y el dock se mueve una vez por fotograma,
 // con transform (lo mueve la tarjeta grafica sin recalcular la pagina)
 addEventListener('pointermove', (e) => {
@@ -308,7 +311,7 @@ dock.addEventListener('pointermove', (e) => {
   const r = dock.getBoundingClientRect();
   dock.style.setProperty('--mx', (e.clientX - r.left) + 'px');
   dock.style.setProperty('--my', (e.clientY - r.top) + 'px');
-  if (drag || !S.magnify || S.reduceMotion || (window.GotaDock && GotaDock.activa())) return;
+  if (drag || !S.magnify || S.reduceMotion || (window.GotaDock && GotaDock.activa()) || S.dockEstilo === 'barra') return;
   const vert = dock.classList.contains('vertical');
   const out = { bottom: [0, -1], top: [0, 1], left: [1, 0], right: [-1, 0] }[S.edge];
   $$('.dock-item', dock).forEach((it) => {

@@ -356,7 +356,7 @@
     const mu = muelle(el, { reposo: 1, activo: o.activo ?? 1.035, estira: o.estira ?? 0.0003, prop: o.prop ?? 'scale' });
     el._lgGel = mu;
     let apretado = false;
-    el.addEventListener('pointerdown', (e) => { if (e.button !== 0 || (o.soloFondo && e.target.closest('button, input, a, [role=button], .cell'))) return; apretado = true; mu.tocar(); });
+    el.addEventListener('pointerdown', (e) => { if (el.id === 'dock' && document.documentElement.classList.contains('dock-barra')) return; if (e.button !== 0 || (o.soloFondo && e.target.closest('button, input, a, [role=button], .cell'))) return; apretado = true; mu.tocar(); });
     const off = () => { if (!apretado) return; apretado = false; mu.soltar(); };
     window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off);
     return mu;
