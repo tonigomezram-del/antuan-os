@@ -403,7 +403,7 @@ const SECTIONS = {
         <div class="card section"><h3>Cristal y dock</h3>
           <div class="row"><div class="lbl"><b>Opacidad del cristal</b><span>Más bajo, más transparente</span></div><input type="range" min="25" max="95" value="${C.glass}" data-k="glass"></div>
           <div class="row"><div class="lbl"><b>Tamaño de los iconos del dock</b></div><input type="range" min="36" max="64" value="${C.dockSize}" data-k="dockSize"></div>
-          <div class="row"><div class="lbl"><b>Estilo del dock</b><span>Líquido: pensado para el cristal. Clásico: el de siempre</span></div>${seg('dockEstilo', [['liquido', 'Líquido'], ['clasico', 'Clásico']], C.dockEstilo || 'liquido')}</div>
+          <div class="row"><div class="lbl"><b>Estilo del dock</b><span>Líquido: pensado para el cristal. Gota (experimento): pegado al borde; Ctrl+Win+Alt+flechas lo deslizan y se dobla en las esquinas. Clásico: el de siempre</span></div>${seg('dockEstilo', [['liquido', 'Líquido'], ['gota', 'Gota'], ['clasico', 'Clásico']], C.dockEstilo || 'liquido')}</div>
           <div class="row"><div class="lbl"><b>Ampliación al pasar el ratón</b></div>${sw(C.magnify !== false, 'data-b="magnify"')}</div>
           <div class="row" style="display:block"><div class="lbl" style="margin-bottom:10px"><b>Posición del dock</b><span>También puedes arrastrarlo directamente.</span></div><div class="edge-pick">${[['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']].map(([v, n]) => `<button data-edge="${v}" aria-pressed="${C.edge === v}">${n}</button>`).join('')}</div></div></div>
         <div class="card section"><h3>Cristal líquido <span class="r faint">Como el de iOS: refracta lo que tiene detrás</span></h3>

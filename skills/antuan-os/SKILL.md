@@ -162,3 +162,14 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Vale para cualquier app, no una lista: se genera de su icono al instalarla (caché en `userData/logos`, versión `v3`).
   - Sin icono: el glifo de Antuan o la letra. Otros estilos: "Líneas" (`umbra`) y "Originales".
 - Dock "Líquido" (por defecto, `dockEstilo`; "Clásico" es el de antes): más redondo (30 px), más aire, iconos al 92 % sin recuadro al pasar el ratón, separadores degradados y un punto blanco con brillo debajo de las apps abiertas. Al cambiar de estilo se recoloca (`layout`).
+- Dock "Gota" (experimento, `dockEstilo: 'gota'`, `ui/gota.js`):
+  - El dock es una gota de cristal pegada al borde, con silueta plana arriba y faldas en curva en S, como el menisco.
+  - Recorre el perímetro de la pantalla (`gotaPos` es la fracción en sentido horario desde la esquina de arriba a la izquierda).
+  - **Ctrl+Win+Alt + flechas** la deslizan con un muelle: se alarga y adelgaza con la velocidad. Al llegar a una esquina se dobla en L, con la esquina interior redondeada (suavizado de Chaikin).
+  - Los iconos van por la línea central (se salta el bucle de la esquina) en orden de lectura.
+  - El cristal es el fondo desenfocado una sola vez, recortado con `clip-path: path()`, más un trazo de brillo SVG.
+  - En este modo `#dock` es una capa de toda la pantalla con `pointer-events: none`; los iconos son las zonas `.hit`.
+  - Sin arrastre ni ampliación con el ratón.
+  - `positionPanels` usa el grosor de la gota.
+  - El borde donde está el centro es `S.edge`.
+  - Prueba: `node prueba-lg/hacer-dock.js` y luego `prueba-lg/app`.
