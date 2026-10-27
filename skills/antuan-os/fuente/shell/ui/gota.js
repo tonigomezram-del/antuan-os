@@ -50,26 +50,23 @@
       svg.append(forma, bisel, brillo);
       // refraccion: filtro SVG cuyo mapa se calcula de la silueta cuando la gota se queda quieta
       const fsvg = document.createElementNS(NS, 'svg'); fsvg.setAttribute('width', 0); fsvg.setAttribute('height', 0); fsvg.style.position = 'absolute';
+      const canal = (c, m) => '<feDisplacementMap in="b" in2="m" scale="0" xChannelSelector="R" yChannelSelector="G" result="d' + c + '" data-c="' + c + '"/>' +
+        '<feColorMatrix in="d' + c + '" type="matrix" values="' + m + '" result="c' + c + '"/>';
       fsvg.innerHTML = '<filter id="gotaLente" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">' +
-        '<feImage result="m" preserveAspectRatio="none" x="0" y="0"/><feDisplacementMap in="SourceGraphic" in2="m" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter>';
+        '<feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/><feImage result="m" preserveAspectRatio="none" x="0" y="0"/>' +
+        canal('r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0') + canal('g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0') + canal('bl', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0') +
+        '<feBlend in="cr" in2="cg" mode="screen" result="rg"/><feBlend in="rg" in2="cbl" mode="screen" result="disp"/>' +
+        '<feColorMatrix in="disp" type="saturate" values="1.3"/></filter>';
       capa.append(fsvg);
       capa.append(vidrio, svg);
       document.body.insertBefore(capa, dock);
       fondoBorroso();
     }
 
-    // El cristal: el fondo de pantalla ya desenfocado una sola vez (recortar una imagen fija es barato)
-    async function fondoBorroso() {
-      const url = getComputedStyle(document.documentElement).getPropertyValue('--wp-img').trim().replace(/^url\(["']?|["']?\)$/g, '');
-      if (!url || !vidrio) return;
-      const img = new Image(); img.src = url;
-      try { await img.decode(); } catch { return; }
-      const c = document.createElement('canvas'), k = 0.35;   // a un tercio de tamano: el desenfoque lo disimula
-      c.width = Math.round(W * k); c.height = Math.round(H * k);
-      const x = c.getContext('2d'), s = Math.max(c.width / img.naturalWidth, c.height / img.naturalHeight);
-      x.filter = 'blur(7px) saturate(1.6) brightness(1.05)';
-      x.drawImage(img, (c.width - img.naturalWidth * s) / 2, (c.height - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
-      vidrio.style.backgroundImage = `url(${c.toDataURL('image/jpeg', 0.9)})`;
+    // El cristal deja ver el fondo de pantalla nitido; el desenfoque y la refraccion los pone el filtro
+    function fondoBorroso() {
+      if (!vidrio) return;
+      vidrio.style.backgroundImage = getComputedStyle(document.documentElement).getPropertyValue('--wp-img').trim();
     }
 
     // Curva amplia: remuestrea la linea cada 3 px y la promedia en una ventana de "radio" px. Lo recto sigue
@@ -157,7 +154,7 @@
       bisel.setAttribute('d', 'M' + suave.map(pt).join('L'));
       svg.querySelector('#gotaRecorte path').setAttribute('d', d);
       ultima = d;
-      if (g.vivo) vidrio.style.filter = '';
+      if (g.vivo) moverMapa();
 
       // Iconos: por la linea central de la gota (a media altura). En una esquina esa linea se curva por dentro,
       // asi que se mide su largo real y los iconos se reparten por ella sin amontonarse ni salirse.
@@ -181,24 +178,56 @@
 
     // Refraccion de la gota: se pinta la silueta a un tercio de tamano, se difumina, y la pendiente de ese
     // relieve en cada punto dice hacia donde se dobla el fondo (el canto empuja hacia dentro, como una lente)
-    function refractar() {
+    // En movimiento el mapa de refraccion se desplaza con la gota (casi gratis). Solo si cambia de borde (dobla
+    // una esquina) se recalcula, y como mucho cada 150 ms; al pararse, otra vez a resolucion completa.
+    let ultimoRapido = 0;
+    function moverMapa() {
+      const img = capa && capa.querySelector('#gotaLente feImage');
+      if (!img || g.pMapa === undefined) return;
+      const a = borde(g.pMapa), b = borde(g.p);
+      if (a.nx === b.nx && a.ny === b.ny) { img.setAttribute('x', (b.x - a.x).toFixed(1)); img.setAttribute('y', (b.y - a.y).toFixed(1)); return; }
+      const t = performance.now();
+      if (t - ultimoRapido > 150) { ultimoRapido = t; refractar(true); }
+    }
+
+    function refractar(rapido) {
       if (!capa || !ultima) return;
-      const k = 1 / 3, w = Math.round(W * k), h = Math.round(H * k);
+      // los mismos ajustes que el resto del cristal (Centro > Cristal liquido)
+      const A = Object.assign({ refraccion: 1.5, cromatica: 0.06, desenfoque: 1.2, lupa: 0.12, grosor: 110, bisel: 22, saturacion: 1.3 }, window.LiquidGlass ? LiquidGlass.ajustes : {});
+      const tam = (M.S.dockSize || 46) + 18, fz = Math.min(3, Math.max(0.6, tam / 100));
+      const B = A.bisel * fz, G = A.grosor * fz;
+      const k = rapido ? 1 / 6 : 1 / 3, w = Math.round(W * k), h = Math.round(H * k);
       const a = document.createElement('canvas'); a.width = w; a.height = h;
       const x = a.getContext('2d'); x.scale(k, k); x.fillStyle = '#fff'; x.fill(new Path2D(ultima));
-      const b = document.createElement('canvas'); b.width = w; b.height = h;
-      const y = b.getContext('2d'); y.filter = 'blur(6px)'; y.drawImage(a, 0, 0);
-      const al = y.getImageData(0, 0, w, h).data, mapa = y.createImageData(w, h), md = mapa.data;
-      const A = (i, j) => al[((Math.min(h - 1, Math.max(0, j)) * w) + Math.min(w - 1, Math.max(0, i))) * 4] / 255;
+      // relieve del canto (desenfoque corto) y relieve de la lupa (desenfoque largo, apunta al centro de la gota)
+      const relieve = (r) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const y = c.getContext('2d'); y.filter = `blur(${Math.max(0.6, r * k)}px)`; y.drawImage(a, 0, 0); return y.getImageData(0, 0, w, h).data; };
+      const e1 = relieve(B * 0.55), e2 = relieve(tam * 0.45);
+      const gr = (al, i, j) => { const A_ = (ii, jj) => al[((Math.min(h - 1, Math.max(0, jj)) * w) + Math.min(w - 1, Math.max(0, ii))) * 4]; return [A_(i + 1, j) - A_(i - 1, j), A_(i, j + 1) - A_(i, j - 1)]; };
+      // desplazamiento en pixeles, como en la lente de los widgets: el canto dobla mucho, el centro amplia (lupa)
+      const borde = 1.11 * (G + B) * A.refraccion / 2, lupa = (1 - 1 / (1 + A.lupa)) * tam / 2;
+      let m1 = 1, m2 = 1;
+      const dx = new Float32Array(w * h), dy = new Float32Array(w * h);
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const [a1, b1] = gr(e1, i, j), [a2, b2] = gr(e2, i, j); m1 = Math.max(m1, Math.hypot(a1, b1)); m2 = Math.max(m2, Math.hypot(a2, b2)); }
+      let mayor = 0.001;
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-        const gx = A(i + 1, j) - A(i - 1, j), gy = A(i, j + 1) - A(i, j - 1), o = (j * w + i) * 4;
-        md[o] = 128 + Math.max(-127, Math.min(127, gx * 380)); md[o + 1] = 128 + Math.max(-127, Math.min(127, gy * 380)); md[o + 2] = 128; md[o + 3] = 255;
+        const [a1, b1] = gr(e1, i, j), [a2, b2] = gr(e2, i, j), o = j * w + i;
+        dx[o] = a1 / m1 * borde + a2 / m2 * lupa; dy[o] = b1 / m1 * borde + b2 / m2 * lupa;
+        mayor = Math.max(mayor, Math.abs(dx[o]), Math.abs(dy[o]));
       }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const y = c.getContext('2d'), mapa = y.createImageData(w, h), md = mapa.data;
+      for (let o = 0; o < w * h; o++) { md[o * 4] = 128 + dx[o] / mayor * 127; md[o * 4 + 1] = 128 + dy[o] / mayor * 127; md[o * 4 + 2] = 128; md[o * 4 + 3] = 255; }
       y.putImageData(mapa, 0, 0);
-      const img = capa.querySelector('#gotaLente feImage');
-      img.setAttribute('href', b.toDataURL()); img.setAttribute('width', W); img.setAttribute('height', H);
-      capa.querySelector('#gotaLente feDisplacementMap').setAttribute('scale', 46);
-      if (!g.vivo) vidrio.style.filter = 'url(#gotaLente)';
+      const fl = capa.querySelector('#gotaLente'), img = fl.querySelector('feImage');
+      img.setAttribute('href', c.toDataURL()); img.setAttribute('width', W); img.setAttribute('height', H);
+      img.setAttribute('x', 0); img.setAttribute('y', 0); g.pMapa = g.p;
+      const esc = mayor * 2;
+      fl.querySelector('[data-c="r"]').setAttribute('scale', (esc * (1 + A.cromatica)).toFixed(1));
+      fl.querySelector('[data-c="g"]').setAttribute('scale', esc.toFixed(1));
+      fl.querySelector('[data-c="bl"]').setAttribute('scale', (esc * (1 - A.cromatica)).toFixed(1));
+      fl.querySelector('feGaussianBlur').setAttribute('stdDeviation', A.desenfoque);
+      fl.querySelector('feColorMatrix[type="saturate"]').setAttribute('values', A.saturacion);
+      vidrio.style.filter = 'url(#gotaLente)';
     }
 
     // Muelle hacia el objetivo (rebota un poco al parar)
@@ -257,10 +286,11 @@
       return true;
     }
 
-    window.GotaDock = { activa, aplicar, flecha, dibujar: () => capa && dibujar(), fondoBorroso: () => capa && fondoBorroso() };
+    window.GotaDock = { activa, aplicar, flecha, dibujar: () => capa && dibujar(), fondoBorroso: () => capa && fondoBorroso(), refractar: (r) => capa && refractar(r) };
     aplicar();
     addEventListener('resize', () => activa() && aplicar());
     U.on('wallpaper', () => setTimeout(() => window.GotaDock.fondoBorroso(), 300));
+    if (window.LiquidGlass) LiquidGlass.alCambiar(() => { if (capa && !g.vivo) refractar(); });
     // los iconos cambian (apps abiertas, fijadas): se recolocan
     new MutationObserver(() => { if (capa) dibujar(); }).observe(dock, { childList: true, subtree: true });
   });

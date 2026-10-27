@@ -169,9 +169,9 @@
   //  widget: el cristal grueso con lupa (el de la vista previa) · dock/bandeja: borde algo mas ancho, lupa suave
   const PIEZAS = {
     widget: {},
-    tarjeta: { bisel: 0.75, grosor: 0.6, lupa: 0.4, refraccion: 0.9 },
+    tarjeta: {},   // el mismo cristal que los widgets (Toni: la configuracion se aplica a todo por igual)
     gota: { bisel: 1.5, grosor: 0.5, lupa: 0, refraccion: 0.7, especular: 1.15 },
-    dock: { bisel: 1.15, grosor: 0.9, lupa: 0.6 }
+    dock: {}
   };
   function conPieza(a, pieza) {
     const p = PIEZAS[pieza]; if (!p) return a;

@@ -382,3 +382,9 @@ html.dock-gota #dock .dock-group { display: contents; }
 #dockSel.on:not(.encima) { opacity: .75; }
 html.dock-liquido .dock-item:hover, html.dock-liquido .dock-item.focused { background: none; }
 #gotaCapa .gota-bisel { fill: none; stroke: rgba(255,255,255,.22); stroke-width: 16; stroke-linejoin: round; }
+/* Gota con el mismo cristal que los widgets: fondo nitido + filtro; sin el bisel grueso; tinte y brillo fino iguales */
+#gotaCapa .gota-bisel { display: none; }
+#gotaCapa .gota-vidrio { background-size: cover; background-position: center; }
+#gotaCapa .gota-vidrio::after { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,var(--lg-tinte, .16)); }
+#gotaCapa .gota-forma { fill: none; }
+#gotaCapa .gota-brillo { stroke-width: 1.2; }

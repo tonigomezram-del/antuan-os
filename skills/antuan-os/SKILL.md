@@ -177,3 +177,9 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - **Esquina:** el líquido "se encharca". La franja de cada borde se une con un cuarto de círculo de radio 1,55 × grosor, centrado en la esquina (`paralela()`), y después `curvar()` (media móvil cada 3 px) suaviza las uniones. Los iconos van por la paralela a media altura, con radio 0,55 × el del charco.
   - **Cristal:** bisel de luz (trazo ancho difuminado recortado por la gota) y refracción real al pararse (`refractar()`: silueta a 1/3, difuminada; la pendiente da el mapa de `feDisplacementMap`). Mientras se mueve, sin filtro.
 - Selección líquida del dock (`ui/seleccion.js`, todos los estilos): un cuadrito de cristal detrás del icono con el ratón encima, o de la app con el foco si el ratón no está encima de ninguno. Se desliza con un muelle de cuatro valores y se estira solo en el eje del movimiento.
+- **Un solo cristal para todo** (Toni, 2026-10-27: "la configuración se debería aplicar a todo"):
+  - Tarjetas, dock y widgets usan la misma lente (`PIEZAS` vacías) y el mismo radio (`--lg-r-widget`).
+  - La Gota ya no usa fondo desenfocado: deja ver el fondo nítido con el mismo filtro que los widgets (desenfoque, refracción R/G/B, saturación y ajustes del Centro).
+  - Su mapa sale de la silueta: desenfoque corto para el canto y largo para la lupa; la pendiente da la dirección; el desplazamiento se calcula en píxeles como en `mapas()`.
+  - En movimiento, el mapa se desplaza con la gota (`moverMapa`, atributos x/y del `feImage`). Solo se recalcula al doblar una esquina (cada 150 ms como mucho, a 1/6) y al parar (a 1/3: unos 50 ms).
+  - Ojo: en la ventana oculta de `prueba-lg/app` los fotogramas caen a 1 por segundo al moverse; es cosa de la prueba, no de la gota (en pantalla real va bien).
