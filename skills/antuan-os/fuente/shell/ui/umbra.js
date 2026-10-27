@@ -28,6 +28,9 @@ function apply() {
   root.style.setProperty('--accent-rgb', hexToRgb(S.accent));
   if (!S.contrast) root.style.setProperty('--glass-a', (S.glass / 100).toFixed(2)); else root.style.removeProperty('--glass-a');
   root.style.setProperty('--dock-size', S.dockSize + 'px');
+  const dockAntes = root.classList.contains('dock-liquido');
+  root.classList.toggle('dock-liquido', (S.dockEstilo || 'liquido') === 'liquido');
+  if (dockAntes !== root.classList.contains('dock-liquido')) requestAnimationFrame(() => { try { layout(); } catch { } });   // cambia el tamano del dock
   // Liquid Glass tipo iOS en el dock y la bandeja (con alto contraste se queda el cristal opaco)
   if (window.LiquidGlass) {
     LiquidGlass.ajustar(LiquidGlass.desdeConfig(S));
@@ -87,6 +90,8 @@ function tile(a, extra = '') {
     const src = a.icon || ('file:///' + encodeURI(a.png.replace(/\\/g, '/')));
     return `<span class="tile img ${extra}"><img src="${src}" alt=""></span>`;
   }
+  // Estilo "A color" (por defecto): el logo recreado en vector, plano y con sus colores, sobre su baldosa
+  if ((S.logoStyle || 'color') === 'color' && a.logo && a.logo.svgColor) return `<span class="tile color ${a.logo.fondo ? '' : 'claro'} ${extra}" style="${a.logo.fondo ? '--fondo:' + a.logo.fondo : ''}"><img class="logo" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(a.logo.svgColor)}" alt=""></span>`;
   // Logo original recreado en linea por Antuan
   if (a.logo) return `<span class="tile ${extra}" style="--h:${a.logo.hue};--sat:${a.logo.sat}%"><img class="logo" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(a.logo.svg)}" alt=""></span>`;
   if (a.glyph) return `<span class="tile ${extra}" style="--h:${a.hue}">${icon(a.glyph)}</span>`;

@@ -10,7 +10,7 @@ U.on('wallpaper', (url) => { document.documentElement.style.setProperty('--wp-im
 U.on('config-changed', (patch) => {
   Object.assign(M.S, patch); M.apply(); syncAwake();
   if ('edge' in patch) M.set({ edge: patch.edge }, true);
-  if ('pinned' in patch || 'dockSize' in patch || 'logoStyle' in patch) M.renderDock();
+  if ('pinned' in patch || 'dockSize' in patch || 'logoStyle' in patch || 'dockEstilo' in patch) M.renderDock();
 });
 
 /* =================== Panel rapido =================== */

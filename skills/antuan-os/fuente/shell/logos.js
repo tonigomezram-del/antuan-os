@@ -8,7 +8,7 @@ const { recrear } = require('./recrear');
 
 const DIR = path.join(app.getPath('userData'), 'logos');
 fs.mkdirSync(DIR, { recursive: true });
-const VERSION = 'v2';
+const VERSION = 'v3';   // v3: tambien la version a color (svgColor)
 
 const keyFor = (src) => crypto.createHash('sha1').update(VERSION + src.toLowerCase()).digest('hex').slice(0, 16);
 

@@ -156,3 +156,9 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - Un degradado liso no deja ver la refracción. Se generan en el propio PC, sin descargas.
   - En el Centro: Personalización > "Fondos para cristal líquido".
   - Ojo: `setWallpaper` borra los `umbra-fondo-*.png` anteriores. El fondo antiguo de Toni está guardado en `%LOCALAPPDATA%\UmbraOS\fondos-guardados\`.
+- Logos "A color" (por defecto, `logoStyle: 'color'`):
+  - `recrear.js` ya trazaba cada color del icono real con potrace; ahora además devuelve `svgColor` (cada forma rellena con su color, algo más vivo) y `fondo` (el color del contenedor si el logo lo tiene).
+  - `tile()` lo pinta sobre una baldosa de ese color o blanca suave (`.tile.color`, `.tile.color.claro`).
+  - Vale para cualquier app, no una lista: se genera de su icono al instalarla (caché en `userData/logos`, versión `v3`).
+  - Sin icono: el glifo de Antuan o la letra. Otros estilos: "Líneas" (`umbra`) y "Originales".
+- Dock "Líquido" (por defecto, `dockEstilo`; "Clásico" es el de antes): más redondo (30 px), más aire, iconos al 92 % sin recuadro al pasar el ratón, separadores degradados y un punto blanco con brillo debajo de las apps abiertas. Al cambiar de estilo se recoloca (`layout`).

@@ -333,3 +333,27 @@ input[type=range]:active::-webkit-slider-thumb { transform: scale(1.2); }
 /* Cristal liquido en forma "cuadrado con esquinas redondeadas" (Centro > Cristal liquido > Forma) */
 html.lg-cuadrado #dock, html.lg-cuadrado #tray { border-radius: 16px; }
 html.lg-cuadrado #dock .dock-item .tile, html.lg-cuadrado #dock .tile { border-radius: 11px; }
+
+/* Logos "A color": baldosa del color del logo (o blanco suave) con el logo plano y vectorial encima */
+.tile.color { background: linear-gradient(160deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), var(--fondo); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.35), inset 0 -4px 10px rgba(0,0,0,.12), 0 4px 10px -2px rgba(0,0,0,.45); }
+.tile.color.claro { background: linear-gradient(160deg, #ffffff, #e6e8ef); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08), inset 0 -4px 10px rgba(0,0,0,.06), 0 4px 10px -2px rgba(0,0,0,.45); }
+.tile.color img.logo { width: 72%; height: 72%; filter: none; }
+
+/* ---------- Dock "Liquido" (Centro > Cristal y dock > Estilo del dock): pensado para el cristal liquido ----------
+   Mas redondo y aireado, iconos grandes sin recuadro al pasar el raton, separadores finos y un punto discreto */
+html.dock-liquido #dock { padding: 9px 11px; gap: 8px; }
+html.dock-liquido:not(.lg-cuadrado) #dock, html.dock-liquido:not(.lg-cuadrado) #tray { border-radius: 30px; }
+html.dock-liquido #dock .dock-group { gap: 8px; }
+html.dock-liquido #dock.vertical { padding: 11px 9px; }
+html.dock-liquido .dock-item { border-radius: 30%; }
+html.dock-liquido .dock-item:hover { background: none; }
+html.dock-liquido .dock-item .tile { width: 92%; height: 92%; border-radius: 26%; }
+html.dock-liquido .dock-sep { width: 1px; height: 32px; margin: 0 2px; background: linear-gradient(180deg, transparent, rgba(255,255,255,.28), transparent); }
+html.dock-liquido #dock.vertical .dock-sep { width: 32px; height: 1px; margin: 2px 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); }
+html.dock-liquido .dock-item .dot { bottom: -5px; width: 5px; height: 5px; background: rgba(255,255,255,.75); box-shadow: 0 0 6px rgba(255,255,255,.5); }
+html.dock-liquido .dock-item.focused .dot { width: 5px; background: #fff; box-shadow: 0 0 8px rgba(255,255,255,.9); }
+html.dock-liquido .dock-item.multi:not(.focused) .dot { width: 5px; }
+html.dock-liquido body[data-edge="top"] .dock-item .dot { top: -5px; }
+html.dock-liquido #dock.vertical .dock-item .dot { left: -5px; }
+html.dock-liquido #dock.vertical .dock-item.focused .dot { height: 5px; }
+html.dock-liquido #tray { padding: 9px 12px; }

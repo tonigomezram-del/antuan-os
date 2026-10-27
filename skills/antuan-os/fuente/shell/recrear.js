@@ -88,12 +88,12 @@ async function recrear(pngPath) {
     .sort((a, b) => b.pixels.length - a.pixels.length)[0] || null;
   const shapes = useful.filter((g) => g !== container || useful.length === 1);
 
-  const paths = [];
+  const paths = [], capas = [];
   for (const g of shapes) {
     const mask = new Jimp(SIZE, SIZE, 0xffffffff);
     for (const i of g.pixels) mask.bitmap.data.writeUInt32BE(0x000000ff, i * 4);
     const d = await trace(mask);
-    if (d) paths.push(d);
+    if (d) { paths.push(d); capas.push({ d, color: g.color, n: g.pixels.length }); }
   }
   if (!paths.length) return null;
 
@@ -108,7 +108,12 @@ async function recrear(pngPath) {
   let spread = 0;
   for (const a of vivid) for (const b of vivid) { const d = Math.abs(a.h - b.h); spread = Math.max(spread, Math.min(d, 360 - d)); }
   const multicolor = !container && vivid.length >= 2 && spread >= 100;
+  // Estilo a color: cada forma rellena con su color real, algo mas vivo y limpio (logo plano y minimalista)
+  const vivo = ([r, g, b]) => { const x = hsl([r, g, b]); return `hsl(${Math.round(x.h)} ${Math.round(Math.min(1, x.s * 1.15) * 100)}% ${Math.round(Math.min(0.92, Math.max(0.12, x.l)) * 100)}%)`; };
+  const cont = container ? vivo(container.color) : null;
+  const svgColor = `<svg viewBox="0 0 ${SIZE} ${SIZE}" xmlns="http://www.w3.org/2000/svg">${capas.sort((a, b) => b.n - a.n).map((k) => `<path d="${k.d}" fill="${vivo(k.color)}" fill-rule="evenodd"/>`).join('')}</svg>`;
   return {
+    svgColor, fondo: cont,
     svg: `<svg viewBox="0 0 ${SIZE} ${SIZE}" xmlns="http://www.w3.org/2000/svg"><path d="${paths.join(' ')}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
     hue: multicolor ? 228 : Math.round(c.h),
     sat: multicolor || c.s < 0.18 ? 10 : 55
