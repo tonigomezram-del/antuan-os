@@ -10,9 +10,10 @@ const glifos = ['folder', 'globe', 'code', 'chat', 'music', 'game', 'terminal', 
 const catalog = glifos.map((g, i) => ({ id: 'a' + i, name: 'App ' + i, kind: 'desktop', glyph: g, hue: i * 40 }));
 cfg.pinned = catalog.map((a) => a.id);
 const stub = `<script>window.__oy={};window.__cfg=${JSON.stringify(cfg)};
-const base={plataforma:'win32',init:async()=>({config:__cfg,catalog:${JSON.stringify(catalog)},plataforma:'win32',wallpaper:'../UmbraOS/os/build/config/includes.chroot/usr/share/umbra/fondo-antuan.png',user:'Toni'}),
+const base={plataforma:'win32',init:async()=>({config:__cfg,catalog:${JSON.stringify(catalog)},plataforma:'win32',wallpaper:'fondo-brasa.png',user:'Toni'}),
 on:(c,f)=>{(__oy[c]=__oy[c]||[]).push(f)},config:(p)=>Object.assign(__cfg,p)};
 window.umbra=new Proxy(base,{get:(t,k)=>k in t?t[k]:(()=>Promise.resolve(null))});</script>`;
 s = s.replace('<script src="../UmbraOS/shell/ui/icons.js"></script>', stub + '<script src="../UmbraOS/shell/ui/icons.js"></script>');
+s = s.replace('</head>', '<style>html{background:url(fondo-brasa.png) center/cover}</style></head>');
 fs.writeFileSync(path.join(__dirname, 'dock.html'), s);
 console.log('ok');

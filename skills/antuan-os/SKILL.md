@@ -173,3 +173,7 @@ Antuan se copia entero a la RAM, live-boot desmonta la partición de Windows y e
   - `positionPanels` usa el grosor de la gota.
   - El borde donde está el centro es `S.edge`.
   - Prueba: `node prueba-lg/hacer-dock.js` y luego `prueba-lg/app`.
+- Gota, mejoras:
+  - **Esquina:** el líquido "se encharca". La franja de cada borde se une con un cuarto de círculo de radio 1,55 × grosor, centrado en la esquina (`paralela()`), y después `curvar()` (media móvil cada 3 px) suaviza las uniones. Los iconos van por la paralela a media altura, con radio 0,55 × el del charco.
+  - **Cristal:** bisel de luz (trazo ancho difuminado recortado por la gota) y refracción real al pararse (`refractar()`: silueta a 1/3, difuminada; la pendiente da el mapa de `feDisplacementMap`). Mientras se mueve, sin filtro.
+- Selección líquida del dock (`ui/seleccion.js`, todos los estilos): un cuadrito de cristal detrás del icono con el ratón encima, o de la app con el foco si el ratón no está encima de ninguno. Se desliza con un muelle de cuatro valores y se estira solo en el eje del movimiento.

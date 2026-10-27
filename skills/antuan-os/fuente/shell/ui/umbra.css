@@ -370,3 +370,15 @@ html.dock-gota #dock { position: fixed; inset: 0; transform: none !important; le
 html.dock-gota #dock::before, html.dock-gota #dock::after, html.dock-gota #dock .wp, html.dock-gota #dock .dock-sep { display: none !important; }
 html.dock-gota #dock .dock-item { position: absolute; pointer-events: auto; transition: transform .14s var(--ease); }
 html.dock-gota #dock .dock-group { display: contents; }
+
+/* Seleccion liquida del dock (seleccion.js): cuadrito de cristal detras del icono con el raton o de la app activa */
+#dockSel { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 32%; opacity: 0;
+  transform-origin: center; will-change: transform;
+  background: linear-gradient(160deg, rgba(255,255,255,.22), rgba(255,255,255,.05) 55%, rgba(255,255,255,.12));
+  backdrop-filter: blur(6px) saturate(1.7) brightness(1.18);
+  box-shadow: 0 6px 16px -6px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 1px rgba(255,255,255,.18), inset 0 0 0 .5px rgba(255,255,255,.35);
+  transition: opacity .25s var(--ease); }
+#dockSel.on { opacity: 1; }
+#dockSel.on:not(.encima) { opacity: .75; }
+html.dock-liquido .dock-item:hover, html.dock-liquido .dock-item.focused { background: none; }
+#gotaCapa .gota-bisel { fill: none; stroke: rgba(255,255,255,.22); stroke-width: 16; stroke-linejoin: round; }

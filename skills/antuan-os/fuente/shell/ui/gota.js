@@ -13,7 +13,7 @@
     const { S, U } = M;
     const dock = document.getElementById('dock');
     const NS = 'http://www.w3.org/2000/svg';
-    let capa = null, vidrio = null, svg = null, forma = null, brillo = null;
+    let capa = null, vidrio = null, svg = null, forma = null, brillo = null, bisel = null, ultima = '';
     let W = innerWidth, H = innerHeight, P = 2 * (W + H);
     // Estado del muelle: posicion (centro en el perimetro), velocidad y objetivo
     const g = { p: 0, v: 0, obj: 0, vivo: false, t: 0 };
@@ -42,7 +42,17 @@
       svg.innerHTML = `<defs><linearGradient id="gotaBrillo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".3"/></linearGradient></defs>`;
       forma = document.createElementNS(NS, 'path'); forma.setAttribute('class', 'gota-forma');
       brillo = document.createElementNS(NS, 'path'); brillo.setAttribute('class', 'gota-brillo');
-      svg.append(forma, brillo);
+      // bisel: un trazo ancho y difuminado recortado por la propia gota (luz que entra por el canto)
+      svg.querySelector('defs').insertAdjacentHTML('beforeend', '<clipPath id="gotaRecorte"><path/></clipPath>' +
+        '<filter id="gotaDifumina" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter>');
+      bisel = document.createElementNS(NS, 'path'); bisel.setAttribute('class', 'gota-bisel');
+      bisel.setAttribute('clip-path', 'url(#gotaRecorte)'); bisel.setAttribute('filter', 'url(#gotaDifumina)');
+      svg.append(forma, bisel, brillo);
+      // refraccion: filtro SVG cuyo mapa se calcula de la silueta cuando la gota se queda quieta
+      const fsvg = document.createElementNS(NS, 'svg'); fsvg.setAttribute('width', 0); fsvg.setAttribute('height', 0); fsvg.style.position = 'absolute';
+      fsvg.innerHTML = '<filter id="gotaLente" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">' +
+        '<feImage result="m" preserveAspectRatio="none" x="0" y="0"/><feDisplacementMap in="SourceGraphic" in2="m" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter>';
+      capa.append(fsvg);
       capa.append(vidrio, svg);
       document.body.insertBefore(capa, dock);
       fondoBorroso();
@@ -60,6 +70,25 @@
       x.filter = 'blur(7px) saturate(1.6) brightness(1.05)';
       x.drawImage(img, (c.width - img.naturalWidth * s) / 2, (c.height - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
       vidrio.style.backgroundImage = `url(${c.toDataURL('image/jpeg', 0.9)})`;
+    }
+
+    // Curva amplia: remuestrea la linea cada 3 px y la promedia en una ventana de "radio" px. Lo recto sigue
+    // recto y las esquinas pasan a ser curvas grandes y fluidas (como un liquido al doblar), no un angulo.
+    function curvar(pts, radio) {
+      const u = [pts[0]];
+      for (let i = 1; i < pts.length; i++) {
+        const [a, b] = [u[u.length - 1], pts[i]], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        for (let k = 3; k <= d; k += 3) u.push([a[0] + (b[0] - a[0]) * k / d, a[1] + (b[1] - a[1]) * k / d]);
+      }
+      u.push(pts[pts.length - 1]);
+      const v = Math.max(1, Math.round(radio / 3)), out = [];
+      for (let i = 0; i < u.length; i++) {
+        const w = Math.min(v, i, u.length - 1 - i);   // en los extremos la ventana se encoge: siguen pegados al borde
+        let x = 0, y = 0;
+        for (let k = -w; k <= w; k++) { x += u[i + k][0]; y += u[i + k][1]; }
+        out.push([x / (2 * w + 1), y / (2 * w + 1)]);
+      }
+      return out;
     }
 
     // Silueta: a lo largo del tramo del borde, una altura que es plana en el centro y baja en curva en "S"
@@ -83,59 +112,57 @@
         const x = Math.min(1, d / pie), s = x * x * (3 - 2 * x);   // curva en S
         return T * (1 - s);
       };
-      const fuera = [], dentro = [];
-      const esq = esquinas();
+      // Esquinas que quedan dentro de la gota
+      const enGota = [];
+      for (const e of esquinas()) for (const k of [-P, 0, P]) { const q = e + k; if (q > ini && q < fin) enGota.push(q); }
+      // Linea paralela al borde a la altura h(p). En cada esquina, en vez de un angulo, el liquido se encharca:
+      // la linea sigue un cuarto de circulo de radio R centrado en la esquina (como el agua al doblar)
+      function paralela(h, R, desde = ini, hasta = fin) {
+        const pts = [];
+        const salto = (p, c) => { const hh = h(c); return Math.sqrt(Math.max(0, R * R - hh * hh)); };
+        let previo = -Infinity;
+        for (const p of ps) {
+          if (p < desde || p > hasta) continue;
+          for (const c of enGota) {
+            if (previo < c && p >= c) {   // se cruza la esquina c: arco
+              const C = borde(c), nA = borde(c - 1), nB = borde(c + 1), hh = Math.min(h(c), R * 0.98);
+              const t1 = Math.atan2(hh, Math.sqrt(R * R - hh * hh)), t2 = Math.PI / 2 - t1;
+              for (let k = 0; k <= 16; k++) {
+                const t = t1 + (t2 - t1) * k / 16;
+                pts.push([C.x + R * (Math.cos(t) * nB.nx + Math.sin(t) * nA.nx), C.y + R * (Math.cos(t) * nB.ny + Math.sin(t) * nA.ny)]);
+              }
+            }
+          }
+          previo = p;
+          if (enGota.some((c) => Math.abs(p - c) < salto(p, c))) continue;   // dentro del charco: lo dibuja el arco
+          const b = borde(p), hp = h(p);
+          pts.push([b.x + b.nx * hp, b.y + b.ny * hp]);
+        }
+        return pts;
+      }
+      const fuera = [];
       for (const p of ps) {
-        const b = borde(p), h = alto(p);
-        // justo en la esquina: el punto interior es el rincon de la L (normales de los dos bordes sumadas);
-        // el suavizado lo convierte en una curva, como un liquido que dobla la esquina
-        if (esq.some((e) => Math.abs(modP(p) - e) < 0.005 || Math.abs(modP(p) - e - P) < 0.005)) {
-          const a1 = borde(p - 1), a2 = borde(p + 1);
-          fuera.push([b.x - (a1.nx + a2.nx) * 3, b.y - (a1.ny + a2.ny) * 3]);
-          dentro.push([b.x + (a1.nx + a2.nx) * h, b.y + (a1.ny + a2.ny) * h]);
-          continue;
-        }
+        const b = borde(p);
+        if (enGota.some((c) => Math.abs(p - c) < 0.005)) { const a1 = borde(p - 1), a2 = borde(p + 1); fuera.push([b.x - (a1.nx + a2.nx) * 3, b.y - (a1.ny + a2.ny) * 3]); continue; }
         fuera.push([b.x - b.nx * 3, b.y - b.ny * 3]);              // un poco por fuera de la pantalla
-        dentro.push([b.x + b.nx * h, b.y + b.ny * h]);
       }
-      // la cara interior se suaviza (Chaikin): esquina interior redondeada al doblarse
-      let suave = dentro;
-      for (let it = 0; it < 3; it++) {
-        const s2 = [suave[0]];
-        for (let i = 0; i < suave.length - 1; i++) {
-          const [a, b] = [suave[i], suave[i + 1]];
-          s2.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
-        }
-        s2.push(suave[suave.length - 1]); suave = s2;
-      }
+      const Rc = T * 1.55;                                         // radio del charco en la esquina
+      let suave = curvar(paralela(alto, Rc), T * 0.7);             // cara interior: uniones suaves
+
       const pt = ([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`;
       const d = 'M' + fuera.map(pt).join('L') + 'L' + suave.slice().reverse().map(pt).join('L') + 'Z';
       forma.setAttribute('d', d);
       brillo.setAttribute('d', 'M' + suave.map(pt).join('L'));
       vidrio.style.clipPath = `path('${d}')`;
+      bisel.setAttribute('d', 'M' + suave.map(pt).join('L'));
+      svg.querySelector('#gotaRecorte path').setAttribute('d', d);
+      ultima = d;
+      if (g.vivo) vidrio.style.filter = '';
 
       // Iconos: por la linea central de la gota (a media altura). En una esquina esa linea se curva por dentro,
       // asi que se mide su largo real y los iconos se reparten por ella sin amontonarse ni salirse.
       const lista = piezas(), paso = (tam + 8) * estira;
-      const centro = [];
-      const r2 = T / 2 + 0.5;
-      for (let p = g.p - L / 2; p <= g.p + L / 2; p += 3) {
-        const b = borde(p), x = b.x + b.nx * T / 2, y = b.y + b.ny * T / 2;
-        // dentro del cuadrado de una esquina la linea haria un bucle: se salta y gira limpia
-        if ((x < r2 || x > W - r2) && (y < r2 || y > H - r2) && !(Math.abs(x - T / 2) < 1 && Math.abs(y - T / 2) < 1)) {
-          const enEsquina = (Math.abs(b.x) < 1 || Math.abs(b.x - W) < 1) && (Math.abs(b.y) < 1 || Math.abs(b.y - H) < 1);
-          if (!enEsquina) continue;
-          centro.push([Math.min(Math.max(x, T / 2), W - T / 2), Math.min(Math.max(y, T / 2), H - T / 2)]);
-          continue;
-        }
-        centro.push([x, y]);
-      }
-      let linea = centro;
-      for (let it = 0; it < 4; it++) {   // suavizado: la esquina de la linea central pasa a ser una curva
-        const s2 = [linea[0]];
-        for (let i = 0; i < linea.length - 1; i++) { const [a, b] = [linea[i], linea[i + 1]]; s2.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); }
-        s2.push(linea[linea.length - 1]); linea = s2;
-      }
+      let linea = curvar(paralela(() => T / 2, Rc * 0.55, g.p - L / 2, g.p + L / 2), T * 0.7);
       const acum = [0];
       for (let i = 1; i < linea.length; i++) acum.push(acum[i - 1] + Math.hypot(linea[i][0] - linea[i - 1][0], linea[i][1] - linea[i - 1][1]));
       const largo = acum[acum.length - 1], sep = Math.min(paso, (largo - tam) / Math.max(1, lista.length - 1));
@@ -152,13 +179,35 @@
       return { L, T };
     }
 
+    // Refraccion de la gota: se pinta la silueta a un tercio de tamano, se difumina, y la pendiente de ese
+    // relieve en cada punto dice hacia donde se dobla el fondo (el canto empuja hacia dentro, como una lente)
+    function refractar() {
+      if (!capa || !ultima) return;
+      const k = 1 / 3, w = Math.round(W * k), h = Math.round(H * k);
+      const a = document.createElement('canvas'); a.width = w; a.height = h;
+      const x = a.getContext('2d'); x.scale(k, k); x.fillStyle = '#fff'; x.fill(new Path2D(ultima));
+      const b = document.createElement('canvas'); b.width = w; b.height = h;
+      const y = b.getContext('2d'); y.filter = 'blur(6px)'; y.drawImage(a, 0, 0);
+      const al = y.getImageData(0, 0, w, h).data, mapa = y.createImageData(w, h), md = mapa.data;
+      const A = (i, j) => al[((Math.min(h - 1, Math.max(0, j)) * w) + Math.min(w - 1, Math.max(0, i))) * 4] / 255;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+        const gx = A(i + 1, j) - A(i - 1, j), gy = A(i, j + 1) - A(i, j - 1), o = (j * w + i) * 4;
+        md[o] = 128 + Math.max(-127, Math.min(127, gx * 380)); md[o + 1] = 128 + Math.max(-127, Math.min(127, gy * 380)); md[o + 2] = 128; md[o + 3] = 255;
+      }
+      y.putImageData(mapa, 0, 0);
+      const img = capa.querySelector('#gotaLente feImage');
+      img.setAttribute('href', b.toDataURL()); img.setAttribute('width', W); img.setAttribute('height', H);
+      capa.querySelector('#gotaLente feDisplacementMap').setAttribute('scale', 46);
+      if (!g.vivo) vidrio.style.filter = 'url(#gotaLente)';
+    }
+
     // Muelle hacia el objetivo (rebota un poco al parar)
     function paso(t) {
       const dt = g.t ? Math.min(0.032, (t - g.t) / 1000) : 0.016; g.t = t;
       g.v += ((g.obj - g.p) * 90 - g.v * 13) * dt;
       g.p += g.v * dt;
       dibujar();
-      if (Math.abs(g.obj - g.p) < 0.3 && Math.abs(g.v) < 3) { g.p = g.obj; g.v = 0; dibujar(); g.vivo = false; g.t = 0; guardar(); return; }
+      if (Math.abs(g.obj - g.p) < 0.3 && Math.abs(g.v) < 3) { g.p = g.obj; g.v = 0; g.vivo = false; dibujar(); g.t = 0; guardar(); refractar(); return; }
       requestAnimationFrame(paso);
     }
     const arrancar = () => { if (!g.vivo) { g.vivo = true; requestAnimationFrame(paso); } };
@@ -204,7 +253,7 @@
       }
       crear();
       const ini = typeof M.S.gotaPos === 'number' ? M.S.gotaPos * P : { top: W / 2, right: W + H / 2, bottom: W + H + W / 2, left: 2 * W + H + H / 2 }[M.S.edge || 'bottom'];
-      if (!g.vivo) { g.p = g.obj = ini; dibujar(); }
+      if (!g.vivo) { g.p = g.obj = ini; dibujar(); requestAnimationFrame(refractar); }
       return true;
     }
 
