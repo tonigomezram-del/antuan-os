@@ -19,6 +19,10 @@ body { color: var(--text); font: 13px/1.35 "Segoe UI Variable Text", "Segoe UI",
 svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
 #bg { position: fixed; inset: 0; background-size: cover; background-position: center; transition: opacity 1s var(--ease); }
+/* copias del fondo bajo cada cristal (ver ponLente): mismo filtro, sin recalcular en cada fotograma */
+#lg-copias { position: fixed; inset: 0; pointer-events: none; }
+.lg-copia { position: absolute; overflow: hidden; }
+.lg-copia i { position: absolute; display: block; }
 #bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,.45)), linear-gradient(90deg, rgba(0,0,0,.25), transparent 40%); }
 
 /* Reloj */
@@ -227,12 +231,93 @@ function render() {
   grupoLiquido();
 }
 // Cristal liquido de las tarjetas: filtro a la medida de cada una, y uno pequeno compartido para los iconos
+/* ---------------- Cristal sin gastar CPU ----------------
+ * Chromium rehace TODAS las lentes con backdrop-filter en cada fotograma en que cambia cualquier cosa de la pantalla
+ * (una letra, el cursor, el reloj): con 7 lentes, escribir subia la CPU a mas del 100 %. Detras de las lentes solo esta
+ * el fondo de pantalla, asi que debajo de cada una se pone una copia de su trozo de fondo con el MISMO filtro (en
+ * #lg-copias, entre el fondo y las piezas): Chromium la guarda hecha y no la recalcula. Se ve igual porque es el
+ * mismo filtro sobre lo mismo. Mientras la pieza se mueve, se aprieta, cambia de tamano o pisa otra lente, vuelve a
+ * mirar la pantalla en vivo (como siempre) y, cuando se queda quieta, otra vez a la copia. */
+const LENTES = new Set();
+const capaCopias = document.createElement('div'); capaCopias.id = 'lg-copias'; $('#bg').after(capaCopias);
+const identidad = (t) => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)';
+function quieta(el) {
+  if (el._vivo || el.classList.contains('drag') || !el.isConnected) return false;
+  if (el.getAnimations().some((a) => a.playState === 'running')) return false;
+  const cs = getComputedStyle(el);
+  return identidad(cs.transform) && (cs.scale === 'none' || cs.scale === '1') && cs.opacity === '1' && cs.visibility !== 'hidden';
+}
+function colocarLentes() {
+  const fondo = getComputedStyle($('#bg')), vineta = getComputedStyle($('#bg'), '::after').backgroundImage;
+  const lista = [...LENTES].filter((el) => el.isConnected);
+  const rects = new Map(lista.map((el) => [el, el.getBoundingClientRect()]));
+  const pisa = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  // solo importa lo que queda DETRAS: las tarjetas van debajo de los widgets, y entre widgets manda el orden (y el que se arrastra)
+  const nivel = (el) => (el.classList.contains('wd') ? 1000 + (el.classList.contains('drag') ? 500 : 0) + [...document.body.children].indexOf(el) : 0);
+  for (const el of lista) {
+    const r = rects.get(el), c = el._copia, n = nivel(el);
+    const copia = quieta(el) && !lista.some((o) => o !== el && nivel(o) < n && pisa(r, rects.get(o)));
+    if (!copia) {
+      if (el.style.backdropFilter !== el._lgF) el.style.backdropFilter = el._lgF;
+      c.hidden = true; c._clave = ''; continue;
+    }
+    const clave = [r.left, r.top, r.width, r.height, el._lgF, fondo.backgroundImage, innerWidth, innerHeight].join('|');
+    if (c._clave !== clave) {
+      c._clave = clave;
+      // clip-path recorta DESPUES del filtro, como hace backdrop-filter con las esquinas redondeadas
+      const radio = getComputedStyle(el).borderRadius;
+      Object.assign(c.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: radio, clipPath: `inset(0 round ${radio})`, filter: el._lgF });
+      for (const capa of [c.firstChild, c.lastChild]) Object.assign(capa.style, { left: -r.left + 'px', top: -r.top + 'px', width: innerWidth + 'px', height: innerHeight + 'px' });
+      c.firstChild.style.backgroundImage = fondo.backgroundImage; c.firstChild.style.backgroundSize = fondo.backgroundSize; c.firstChild.style.backgroundPosition = fondo.backgroundPosition;
+      c.lastChild.style.backgroundImage = vineta;
+    }
+    c.hidden = false;
+    if (el.style.backdropFilter !== 'none') el.style.backdropFilter = 'none';
+  }
+}
+let colocarPend = 0;
+const recolocar = (ms = 0) => { clearTimeout(colocarPend); colocarPend = setTimeout(() => requestAnimationFrame(colocarLentes), ms); };
+// En vivo un rato (al tocarla o al cambiar de tamano); se vuelve a la copia cuando todo se ha quedado quieto
+function enVivo(el, si) {
+  el._vivo = si;
+  if (si) { el.style.backdropFilter = el._lgF; el._copia.hidden = true; el._copia._clave = ''; return; }
+  let intentos = 0;
+  const mirar = () => { colocarLentes(); if (el._copia && el._copia.hidden && el._lgF && ++intentos < 30) setTimeout(mirar, 150); };
+  setTimeout(mirar, 120);
+}
+function ponLente(el, filtro) {
+  if (!filtro) {
+    el.style.backdropFilter = ''; el._lgF = '';
+    if (el._copia) { el._copia.remove(); el._copia = null; el._ro.disconnect(); }
+    LENTES.delete(el); return;
+  }
+  el._lgF = filtro;
+  if (!el._copia) {
+    const c = document.createElement('div'); c.className = 'lg-copia'; c.hidden = true; c.append(document.createElement('i'), document.createElement('i'));
+    capaCopias.appendChild(c); el._copia = c;
+    el.addEventListener('pointerdown', () => {
+      enVivo(el, true);
+      addEventListener('pointerup', () => enVivo(el, false), { once: true });
+    });
+    el.addEventListener('animationend', () => recolocar(30));
+    // al crecer o encoger (el chat de Antuan AI, una tarjeta nueva) se ve en vivo hasta que llega su filtro a medida
+    let tam = null;
+    el._ro = new ResizeObserver(() => { const t = el.offsetWidth + 'x' + el.offsetHeight; if (tam && t !== tam && !el._vivo) { el.style.backdropFilter = el._lgF; el._copia.hidden = true; el._copia._clave = ''; } tam = t; });
+    el._ro.observe(el);
+  }
+  LENTES.add(el);
+  recolocar(30);
+}
+addEventListener('resize', () => recolocar(100));
+// por si algo mueve una pieza sin avisar (una tarjeta que se recoloca al cambiar otra): se repasa cada poco, es barato
+setInterval(() => { if (LENTES.size && !document.hidden) colocarLentes(); }, 1500);
+
 const tarjetas = new ResizeObserver((es) => { for (const e of es) { clearTimeout(e.target._lgT); e.target._lgT = setTimeout(() => ponTarjeta(e.target), 160); } });
 function ponTarjeta(el) {
   if (!window.LiquidGlass) return;
   const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
   const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 34;
-  if (w > 20 && h > 20 && el.classList.contains('lg')) el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'widget' }, 'lente')})`;
+  if (w > 20 && h > 20 && el.classList.contains('lg')) ponLente(el, `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'widget' }, 'lente')})`);
 }
 function grupoLiquido() {
   let c0; try { c0 = cfg; } catch { c0 = info.config; }   // la primera vez cfg aun no existe
@@ -333,7 +418,7 @@ U.on('config', (c) => {
   if (ahora === antes) return;
   if (ahora) { $$('.wd').forEach(liquido); grupoLiquido(); }
   else for (const el of $$('.wd.lg, .group.lg')) {
-    el.classList.remove('lg'); el.style.backdropFilter = '';
+    el.classList.remove('lg'); ponLente(el, '');
     const d = el.querySelector('.wd-in'); if (d) d.style.filter = '';
   }
 });
@@ -404,7 +489,7 @@ function liquido(el) {
     const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
     if (w < 20 || h < 20) return;
     const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 38;
-    el.style.backdropFilter = `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'widget' }, 'lente')})`;
+    ponLente(el, `url(#${LiquidGlass.filtroFijo(w, h, r, { pieza: 'widget' }, 'lente')})`);
     // el texto y los iconos de dentro tambien se doblan y separan en colores cerca del canto (Ajustes > Contenido)
     const dentro = el.querySelector('.wd-in');
     dentro.style.filter = LiquidGlass.ajustes.contenido > 0 ? `url(#${LiquidGlass.filtroFijo(w, h, r, {}, 'contenido')})` : '';

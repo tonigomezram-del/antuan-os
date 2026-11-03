@@ -118,25 +118,41 @@ function activeId() {
   const m = /window id # (0x[0-9a-f]+)/i.exec(sh('xprop', ['-root', '_NET_ACTIVE_WINDOW']));
   return m ? hexToKey(m[1]) : '';
 }
-function stateOf(hex) {
-  const s = sh('xprop', ['-id', hex, '_NET_WM_STATE', '_NET_WM_WINDOW_TYPE']);
+const stateOf = (hex) => leerEstado(sh('xprop', ['-id', hex, '_NET_WM_STATE', '_NET_WM_WINDOW_TYPE']));
+function leerEstado(s) {
   return { hidden: /HIDDEN/.test(s), above: /ABOVE/.test(s), fullscreen: /FULLSCREEN/.test(s), normal: !/_NET_WM_WINDOW_TYPE_(DOCK|DESKTOP|SPLASH|TOOLBAR|MENU|NOTIFICATION|DIALOG)/.test(s) || /DIALOG/.test(s) };
 }
 
-function listWindows(ownPids = []) {
-  const act = activeId();
-  const out = [];
+// Antes eran ~N+4 programas seguidos (wmctrl y un xprop por ventana) que bloqueaban Antuan en cada cambio de ventana:
+// en un PC lento el escritorio se quedaba parado. Ahora son dos llamadas en segundo plano: la lista y, de una vez,
+// el estado de las ventanas que interesan (y de la activa, para saber si hay algo a pantalla completa).
+const bash = (script) => new Promise((resolve) => execFile('bash', ['-c', script], { timeout: 3000, maxBuffer: 1 << 20 }, (e, o) => resolve(String(o || ''))));
+let completa = { t: 0, v: false };
+async function listWindows(ownPids = []) {
+  const [raiz, lista = ''] = (await bash('xprop -root _NET_ACTIVE_WINDOW 2>/dev/null; echo "@@lista@@"; wmctrl -lpx 2>/dev/null')).split('@@lista@@');
+  const ma = /window id # (0x[0-9a-f]+)/i.exec(raiz), act = ma ? hexToKey(ma[1]) : '';
+  const cand = [];
   // wmctrl -lpx: id escritorio pid clase maquina titulo
-  for (const line of sh('wmctrl', ['-lpx']).split('\n')) {
+  for (const line of lista.split('\n')) {
     const m = /^(0x[0-9a-f]+)\s+(-?\d+)\s+(\d+)\s+(\S+)\s+\S+\s+(.*)$/i.exec(line.trim());
     if (!m) continue;
     const [, hex, desk, pid, cls, title] = m;
     const web = /\.AntuanWeb$/.test(cls);   // apps web de la Tienda (Claude, ChatGPT...): son de Antuan pero van en la barra
     if (desk === '-1' || SKIP_CLASS.test(cls) || (ownPids.includes(+pid) && !web)) continue;
-    const st = stateOf(hex);
+    cand.push({ key: hexToKey(hex), pid: +pid, cls, title, web });
+  }
+  const claves = [...new Set([...cand.map((c) => c.key), act].filter(Boolean))];
+  const estados = new Map();
+  if (claves.length) {
+    const o = await bash(claves.map((k) => `echo "@@v@@${k}"; xprop -id ${keyToHex(k)} _NET_WM_STATE _NET_WM_WINDOW_TYPE 2>/dev/null`).join('; '));
+    for (const b of o.split('@@v@@').slice(1)) { const i = b.indexOf('\n'); estados.set(b.slice(0, i < 0 ? b.length : i).trim(), leerEstado(i < 0 ? '' : b.slice(i))); }
+  }
+  completa = { t: Date.now(), v: !!(act && estados.get(act) && estados.get(act).fullscreen) };
+  const out = [];
+  for (const c of cand) {
+    const st = estados.get(c.key) || leerEstado('');
     if (!st.normal) continue;
-    const key = hexToKey(hex);
-    out.push({ id: key, title: title || cls.split('.').pop(), cls, exe: web ? 'web:' + title : (exeOf(+pid) || cls), minimized: st.hidden, active: key === act });
+    out.push({ id: c.key, title: c.title || c.cls.split('.').pop(), cls: c.cls, exe: c.web ? 'web:' + c.title : (exeOf(c.pid) || c.cls), minimized: st.hidden, active: c.key === act });
   }
   return out;
 }
@@ -149,6 +165,7 @@ function windowAction(id, action) {
 }
 
 function foregroundIsFullscreen() {
+  if (Date.now() - completa.t < 1500) return completa.v;   // ya lo miro la ultima lista de ventanas
   const a = activeId();
   return a ? stateOf(keyToHex(a)).fullscreen : false;
 }

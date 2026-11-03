@@ -223,11 +223,12 @@ async function usar(nombre, a = {}) {
       const f = String(a.filtro || '').toLowerCase();
       return { apps: ctx.catalogo().map((x) => x.display || x.name).filter((x) => x && x.toLowerCase().includes(f)).slice(0, 80) };
     }
-    case 'listar_ventanas': return { ventanas: ctx.ventanas().map((w) => ({ titulo: w.title, activa: w.active, minimizada: w.minimized })) };
+    case 'listar_ventanas': return { ventanas: (await ctx.ventanas()).map((w) => ({ titulo: w.title, activa: w.active, minimizada: w.minimized })) };
     case 'controlar_ventana': {
       const t = String(a.titulo || '').toLowerCase();
-      const w = ctx.ventanas().find((x) => `${x.title} ${x.exe} ${x.cls || ''}`.toLowerCase().includes(t));
-      if (!w) return { error: 'No hay ninguna ventana así abierta', ventanas_abiertas: ctx.ventanas().map((x) => x.title) };
+      const ventanas = await ctx.ventanas();
+      const w = ventanas.find((x) => `${x.title} ${x.exe} ${x.cls || ''}`.toLowerCase().includes(t));
+      if (!w) return { error: 'No hay ninguna ventana así abierta', ventanas_abiertas: ventanas.map((x) => x.title) };
       const acc = { enfocar: 'focus', minimizar: 'minimize', cerrar: 'close', maximizar: 'maximize' }[String(a.accion).toLowerCase()];
       if (!acc) return { error: 'Acción no válida' };
       if (acc === 'maximize') {

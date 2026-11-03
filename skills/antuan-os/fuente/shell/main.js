@@ -18,6 +18,19 @@ if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,SpareRendererForSitePerProcess,MediaSessionService,HardwareMediaKeyHandling,Translate,SpellCheck');
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=192');
 app.commandLine.appendSwitch('disable-http-cache');
+// Antuan OS: Chromium deja sin usar muchas graficas Intel/AMD en Linux y entonces el cristal liquido lo dibuja el
+// procesador. Si hay aceleracion de verdad (no llvmpipe), se usa para dibujar; si el driver fallara, Chromium
+// vuelve solo al modo sin grafica. Se puede apagar con config "graficaForzada": false.
+if (LINUX) {
+  try {
+    const cfgGpu = (() => { try { return JSON.parse(fs.readFileSync(path.join(app.getPath('appData'), 'Antuan', 'config.json'), 'utf8')); } catch { return {}; } })();
+    const gl = require('child_process').execFileSync('glxinfo', ['-B'], { encoding: 'utf8', timeout: 2500, stdio: ['ignore', 'pipe', 'ignore'] });
+    const real = /OpenGL renderer string/i.test(gl) && !/llvmpipe|softpipe|swrast|software/i.test(gl);
+    if (real && cfgGpu.graficaForzada !== false) {
+      for (const s of ['ignore-gpu-blocklist', 'enable-gpu-rasterization', 'enable-zero-copy']) app.commandLine.appendSwitch(s);
+    }
+  } catch { }
+}
 
 // Migracion: los datos de versiones anteriores pasan a la carpeta actual (%APPDATA%\Antuan).
 // Antes se llamaba Umbra (%APPDATA%\Umbra) y, en las primeras versiones, umbra-shell.
@@ -668,7 +681,7 @@ function packageFamily(exePath) {
   return parts.length === 2 ? (parts[0].split('_')[0] + '_' + parts[1]).toLowerCase() : null;
 }
 async function runningGroups() {
-  const wins = native.listWindows(ownPids());
+  const wins = await native.listWindows(ownPids());   // en Antuan OS va en segundo plano (no bloquea)
   const groups = new Map();
   for (const w of wins) {
     const key = (w.exe || w.title).toLowerCase();

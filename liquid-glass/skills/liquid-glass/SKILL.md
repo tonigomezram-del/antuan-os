@@ -90,6 +90,7 @@ Copia la carpeta `kit/` al proyecto y parte de `demo.html`.
 
 ## Rendimiento
 
+- **Lo que más gasta:** Chromium rehace TODAS las lentes con `backdrop-filter: url()` en cada fotograma en que cambia cualquier píxel de la pantalla (una letra, el cursor, el reloj). Con 7 lentes, escribir subía la CPU al 123 % y bajaba a 20 fps. Si detrás de la lente solo hay un fondo fijo, pon debajo de la pieza una copia de su trozo de fondo con el **mismo filtro** como `filter` normal (Chromium la guarda hecha). Recórtala con `clip-path: inset(0 round <radio>)`, que va después del filtro como hace backdrop-filter. Vuelve a `backdrop-filter` en vivo solo mientras la pieza se mueve, se aprieta, cambia de tamaño o pisa otra lente. Así queda en 17 % y 60 fps, y se ve idéntico (diferencia media de 0,03 sobre 255 en pruebas). Está hecho en `ponLente()` de `escritorio.html` en Antuan.
 - No regeneres mapas en cada fotograma: espera a que el tamaño se quede quieto (unos 160 ms). Si algo se desplaza, mueve el `feImage` en vez de recalcularlo.
 - Pocas lentes a la vez: decenas de `backdrop-filter` con SVG pesan. Los iconos pequeños mejor con un brillo de CSS que con su propia lente.
 - `backdrop-filter: url()` solo funciona en Chromium (Chrome, Edge, Electron). En Safari y Firefox el kit se queda en cristal esmerilado normal; pon `backdrop-filter: blur(18px) saturate(1.6)` como alternativa si hace falta.
