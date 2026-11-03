@@ -1,11 +1,11 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "fecha": "2026-11-03",
   "cambios": [
-    "Antuan AI se instala entera con la actualización: el motor y el modelo (elegido por la memoria de tu PC)",
-    "Arreglado: la instalación de Antuan AI fallaba al poner la contraseña (faltaba zstd)",
-    "El widget enseña qué modelo usa y cuánto ocupa, y el progreso de la descarga",
-    "Antuan AI: una IA que funciona en tu PC, gratis y sin límites, y que maneja el sistema",
-    "Claude, ChatGPT y las demás apps web tienen botón de cerrar y salen en la barra de tareas"
+    "Antuan AI se adapta a PCs sencillos: sin tarjeta gráfica elige un modelo más ligero que contesta en segundos",
+    "Antuan AI deja el modelo cargado y las instrucciones ya leídas al encender, para que la primera respuesta no espere",
+    "Mientras piensa, el widget lo dice con los segundos que lleva",
+    "Se borra el modelo anterior si cambia por uno más ligero, para liberar disco",
+    "Antuan AI se instala entera con la actualización: el motor y el modelo"
   ]
 }

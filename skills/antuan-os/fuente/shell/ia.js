@@ -18,7 +18,7 @@ function modeloPorMemoria() {
 }
 
 // Nombre que se ensena al usuario y lo que ocupa (para saber que se va a descargar)
-const FICHAS = { 'qwen3:8b': ['Qwen 3 8B', '5,2 GB'], 'qwen3:4b': ['Qwen 3 4B', '2,6 GB'], 'qwen3:1.7b': ['Qwen 3 1.7B', '1,4 GB'] };
+const FICHAS = { 'qwen3:8b': ['Qwen 3 8B', '5,2 GB'], 'qwen3:4b': ['Qwen 3 4B', '2,6 GB'], 'qwen3:1.7b': ['Qwen 3 1.7B', '1,4 GB'], 'qwen3:0.6b': ['Qwen 3 0.6B', '0,5 GB'] };
 function ficha(m) {
   const [nombre, peso] = FICHAS[m] || [m, ''];
   return { modelo: m, nombre, peso, ram: Math.round(os.totalmem() / 2 ** 30) };
@@ -100,6 +100,7 @@ async function estado() {
     if (act) return { estado: 'descargando', ...ficha(m), ...act };
     descargar(); return { estado: 'descargando', ...ficha(m), ...(descargando || {}) };
   }
+  if (!calentado) precalentar();
   return { estado: 'listo', ...ficha(m) };
 }
 
@@ -120,7 +121,7 @@ function descargar() {
     if (l.total) descargando = { progreso: Math.round(l.completed / l.total * 100) || 0, texto: `Descargando ${ficha(m).nombre}: ${(l.completed / 2 ** 30).toFixed(1)} de ${(l.total / 2 ** 30).toFixed(1)} GB` };
     else descargando = { progreso: descargando.progreso, texto: l.status || '…' };
     emitir('estado', { estado: 'descargando', ...ficha(m), ...descargando });
-  }).then(() => { descargando = null; emitir('estado', { estado: 'listo', recien: true, ...ficha(m) }); })
+  }).then(() => { descargando = null; emitir('estado', { estado: 'listo', recien: true, ...ficha(m) }); precalentar(); })
     .catch((e) => { descargando = null; emitir('estado', { estado: 'error', ...ficha(m), texto: 'No se pudo descargar el modelo: ' + e.message }); });
 }
 
@@ -176,7 +177,7 @@ const HERRAMIENTAS = [
   ['controlar_ventana', 'Enfoca, minimiza, maximiza o cierra una ventana abierta buscándola por su título o app.', { titulo: 'parte del título o del nombre de la app', accion: 'enfocar | minimizar | maximizar | cerrar' }, ['titulo', 'accion']],
   ['volumen', 'Cambia el volumen (0-100) o silencia.', { nivel: 'número 0-100 (opcional)', silencio: 'true para silenciar, false para quitarlo (opcional)' }, []],
   ['brillo', 'Cambia el brillo de la pantalla (0-100).', { nivel: 'número 0-100' }, ['nivel']],
-  ['cambiar_ajuste', 'Cambia un ajuste de Antuan. Claves: ' + Object.entries(AJUSTES).map(([k, v]) => `${k} (${Array.isArray(v) ? v.join('/') : v})`).join(', '), { clave: 'nombre del ajuste', valor: 'valor nuevo' }, ['clave', 'valor']],
+  ['cambiar_ajuste', 'Cambia un ajuste de Antuan. Claves: ' + Object.entries(AJUSTES).filter(([k]) => !k.startsWith('lg')).map(([k, v]) => `${k} (${Array.isArray(v) ? v.join('/') : v})`).join(', ') + '. Cristal líquido: lgRefraccion, lgCromatica, lgDesenfoque, lgTinte, lgLupa (números).', { clave: 'nombre del ajuste', valor: 'valor nuevo' }, ['clave', 'valor']],
   ['buscar_archivos', 'Busca archivos y carpetas del usuario por nombre.', { texto: 'lo que buscar' }, ['texto']],
   ['abrir', 'Abre un archivo, una carpeta o una web (https://...) con su programa.', { destino: 'ruta o dirección web' }, ['destino']],
   ['leer_archivo', 'Lee un archivo de texto.', { ruta: 'ruta del archivo (~ es la carpeta personal)' }, ['ruta']],
@@ -283,25 +284,40 @@ async function usar(nombre, a = {}) {
 }
 
 // ---------------------------------------------------------------- Conversacion
+// El texto del sistema no cambia nunca (la hora va en cada mensaje): asi Ollama reutiliza lo ya leido y
+// en un PC lento no vuelve a procesar las instrucciones y las herramientas en cada pregunta.
 function sistema() {
-  const ahora = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
-  return `Eres Antuan AI, el asistente integrado en ${LINUX ? 'Antuan OS (un sistema basado en Debian Linux)' : 'el escritorio Antuan en Windows'}. El usuario es ${os.userInfo().username}, su carpeta personal es ${os.homedir()}. Ahora es ${ahora}.
-Hablas siempre en español, de tú, claro y breve. Puedes controlar el PC con tus herramientas: úsalas para HACER lo que te pidan, no para explicar cómo se hace. Si algo necesita varios pasos, encadena las herramientas. Cuando termines, di en una frase qué has hecho. Si una herramienta falla, dilo tal cual y prueba otra forma si la hay. No inventes resultados. Para instalar programas en Antuan OS usa "pkexec apt-get install -y <paquete>" o flatpak.`;
+  return `Eres Antuan AI, el asistente de ${LINUX ? 'Antuan OS (Debian Linux)' : 'Antuan en Windows'}. Usuario: ${os.userInfo().username}, carpeta personal: ${os.homedir()}.
+Habla en español, de tú y breve. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}`;
+}
+const conHora = (t) => `${t}\n\n(${new Date().toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })})`;
+
+// En un PC lento se gana mucho dejando el modelo cargado y con las instrucciones ya leidas antes de la primera pregunta
+const OPCIONES = { temperature: 0.4, num_ctx: 4096 };
+let calentado = false;
+async function precalentar() {
+  if (calentado || ocupado) return;
+  try {
+    calentado = true;
+    await peticion('/api/chat', { model: modelo(), messages: [{ role: 'system', content: sistema() }, { role: 'user', content: 'hola' }], tools: HERRAMIENTAS, stream: false, think: false, keep_alive: '2h', options: { ...OPCIONES, num_predict: 1 } });
+  } catch { calentado = false; }
 }
 
 async function enviar(texto) {
   if (ocupado) return { error: 'Espera a que termine' };
+  calentado = true;   // la pregunta ya carga el modelo: no hace falta precalentar a la vez
   const e = await estado();
   if (e.estado !== 'listo') { emitir('estado', e); return { error: 'Antuan AI aún no está lista' }; }
   ocupado = true;
   if (!historial.length) historial.push({ role: 'system', content: '' });
   historial[0].content = sistema();
-  historial.push({ role: 'user', content: String(texto) });
+  historial.push({ role: 'user', content: conHora(String(texto)) });
   try {
     for (let paso = 0; paso < 10; paso++) {
       const msg = { role: 'assistant', content: '', tool_calls: [] };
       let dentroPensar = false;
-      await peticion('/api/chat', { model: modelo(), messages: historial, tools: HERRAMIENTAS, stream: true, think: false, keep_alive: '30m', options: { temperature: 0.4, num_ctx: 8192 } }, (l) => {
+      emitir('pensando');
+      await peticion('/api/chat', { model: modelo(), messages: historial, tools: HERRAMIENTAS, stream: true, think: false, keep_alive: '2h', options: OPCIONES }, (l) => {
         if (l.error) throw new Error(l.error);
         const m = l.message || {};
         if (m.tool_calls) msg.tool_calls.push(...m.tool_calls);
@@ -347,6 +363,7 @@ module.exports = {
     ASKS['ia.olvidar'] = () => { historial = []; return true; };
     ASKS['ia.instalar'] = () => instalarOllama();
     // en cuanto Antuan arranca se comprueba: si falta el modelo se empieza a bajar solo
-    setTimeout(() => estado().catch(() => { }), 20000);
+    // y si ya esta lista, se carga el modelo en memoria para que la primera respuesta no espere
+    setTimeout(() => estado().then((e) => { if (e.estado === 'listo') precalentar(); }).catch(() => { }), 20000);
   }
 };

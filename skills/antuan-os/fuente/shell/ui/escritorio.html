@@ -530,7 +530,17 @@ const RENDER = {
       else if (e.estado === 'error') { est.innerHTML = '<span class="err"></span>'; $('.err', est).textContent = e.texto || 'Algo ha fallado'; boton('Reintentar'); }
     };
     const ocupado = (si) => { hablando = si; btn.textContent = si ? '■' : '➤'; btn.classList.toggle('parar', si); btn.setAttribute('aria-label', si ? 'Parar' : 'Enviar'); };
+    // "Pensando… 12 s" hasta que llega la primera palabra o la primera accion
+    let pensar = null;
+    const dejarDePensar = () => { if (pensar) { clearInterval(pensar.t); pensar.el.remove(); pensar = null; } };
     window._iaEvento = (e) => {
+      if (e.tipo !== 'estado' && e.tipo !== 'pensando') dejarDePensar();
+      if (e.tipo === 'pensando') {
+        dejarDePensar();
+        const el = add('hz', 'Pensando…'), t0 = Date.now();
+        pensar = { el, t: setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); el.textContent = `Pensando… ${s} s${s > 25 ? ' (la primera vez tarda más)' : ''}`; }, 1000) };
+        return;
+      }
       if (e.tipo === 'estado') return ponerEstado(e);
       if (e.tipo === 'texto') { if (!burbuja) burbuja = add('ia', ''); burbuja.textContent += e.texto; bajar(); return; }
       if (e.tipo === 'herramienta') {
