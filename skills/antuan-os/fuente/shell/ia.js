@@ -15,7 +15,7 @@ const OLLAMA = { host: '127.0.0.1', port: 11434 };
 // actualizacion segun la memoria y la grafica; esto es solo para Windows o si falta ese dato.
 function modeloPorMemoria() {
   const gb = os.totalmem() / 2 ** 30;
-  return gb >= 14 ? 'qwen3:4b-instruct' : gb >= 5 ? 'qwen2.5:1.5b' : 'qwen2.5:0.5b';
+  return gb >= 5 ? 'qwen2.5:1.5b' : 'qwen2.5:0.5b';
 }
 // Qwen 3 "normal" (hibrido) razona en voz alta antes de contestar: se le apaga con think:false y con /no_think
 const hibrido = (m) => /^qwen3:(?!.*instruct)/.test(m);

@@ -33,7 +33,8 @@ GRAFICA=no
 if [ "$GRAFICA" = si ]; then
   if [ "$RAM_GB" -ge 14 ]; then MODELO=qwen3:8b; elif [ "$RAM_GB" -ge 7 ]; then MODELO=qwen3:4b-instruct; else MODELO=qwen2.5:3b; fi
 else
-  if [ "$RAM_GB" -ge 14 ]; then MODELO=qwen3:4b-instruct; elif [ "$RAM_GB" -ge 5 ]; then MODELO=qwen2.5:1.5b; else MODELO=qwen2.5:0.5b; fi
+  # sin grafica manda la velocidad: un "hola" tiene que salir en unos segundos aunque haya mucha memoria
+  if [ "$RAM_GB" -ge 5 ]; then MODELO=qwen2.5:1.5b; else MODELO=qwen2.5:0.5b; fi
 fi
 echo "         Memoria: $RAM_GB GB, tarjeta gráfica para IA: $GRAFICA -> modelo $MODELO"
 IA=/var/lib/antuan-ia; mkdir -p "$IA"; chmod 755 "$IA"; echo "$MODELO" > "$IA/modelo"
