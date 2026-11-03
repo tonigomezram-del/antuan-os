@@ -11,14 +11,21 @@ const { ipcMain, shell } = require('electron');
 const LINUX = process.platform === 'linux';
 const OLLAMA = { host: '127.0.0.1', port: 11434 };
 
-// Qwen 3: habla muy bien espanol y sabe usar herramientas. El tamano se elige por la memoria del PC.
+// Modelos sin "modo pensar" (contestan directamente): Qwen 3 4B Instruct y Qwen 2.5. En Antuan OS lo elige la
+// actualizacion segun la memoria y la grafica; esto es solo para Windows o si falta ese dato.
 function modeloPorMemoria() {
   const gb = os.totalmem() / 2 ** 30;
-  return gb >= 14 ? 'qwen3:8b' : gb >= 7 ? 'qwen3:4b' : 'qwen3:1.7b';
+  return gb >= 14 ? 'qwen3:4b-instruct' : gb >= 5 ? 'qwen2.5:1.5b' : 'qwen2.5:0.5b';
 }
+// Qwen 3 "normal" (hibrido) razona en voz alta antes de contestar: se le apaga con think:false y con /no_think
+const hibrido = (m) => /^qwen3:(?!.*instruct)/.test(m);
 
 // Nombre que se ensena al usuario y lo que ocupa (para saber que se va a descargar)
-const FICHAS = { 'qwen3:8b': ['Qwen 3 8B', '5,2 GB'], 'qwen3:4b': ['Qwen 3 4B', '2,6 GB'], 'qwen3:1.7b': ['Qwen 3 1.7B', '1,4 GB'], 'qwen3:0.6b': ['Qwen 3 0.6B', '0,5 GB'] };
+const FICHAS = {
+  'qwen3:8b': ['Qwen 3 8B', '5,2 GB'], 'qwen3:4b-instruct': ['Qwen 3 4B Instruct', '2,5 GB'], 'qwen2.5:3b': ['Qwen 2.5 3B', '1,9 GB'],
+  'qwen2.5:1.5b': ['Qwen 2.5 1.5B', '1 GB'], 'qwen2.5:0.5b': ['Qwen 2.5 0.5B', '0,4 GB'],
+  'qwen3:4b': ['Qwen 3 4B', '2,6 GB'], 'qwen3:1.7b': ['Qwen 3 1.7B', '1,4 GB'], 'qwen3:0.6b': ['Qwen 3 0.6B', '0,5 GB']
+};
 function ficha(m) {
   const [nombre, peso] = FICHAS[m] || [m, ''];
   return { modelo: m, nombre, peso, ram: Math.round(os.totalmem() / 2 ** 30) };
@@ -170,27 +177,24 @@ const AJUSTES = {
 };
 
 const HERRAMIENTAS = [
-  ['ejecutar_comando', LINUX ? 'Ejecuta un comando bash en el PC (como el usuario; para administrador usa pkexec, que pide la contraseña). Devuelve la salida.' : 'Ejecuta un comando de PowerShell en el PC y devuelve la salida.', { comando: 'el comando' }, ['comando']],
-  ['abrir_app', 'Abre una aplicación instalada por su nombre (Firefox, Archivos, Terminal, Tienda, Centro, Steam...).', { nombre: 'nombre de la app' }, ['nombre']],
-  ['listar_apps', 'Lista las aplicaciones instaladas, filtrando por texto.', { filtro: 'texto a buscar (opcional)' }, []],
-  ['listar_ventanas', 'Lista las ventanas abiertas con su título.', {}, []],
-  ['controlar_ventana', 'Enfoca, minimiza, maximiza o cierra una ventana abierta buscándola por su título o app.', { titulo: 'parte del título o del nombre de la app', accion: 'enfocar | minimizar | maximizar | cerrar' }, ['titulo', 'accion']],
-  ['volumen', 'Cambia el volumen (0-100) o silencia.', { nivel: 'número 0-100 (opcional)', silencio: 'true para silenciar, false para quitarlo (opcional)' }, []],
-  ['brillo', 'Cambia el brillo de la pantalla (0-100).', { nivel: 'número 0-100' }, ['nivel']],
-  ['cambiar_ajuste', 'Cambia un ajuste de Antuan. Claves: ' + Object.entries(AJUSTES).filter(([k]) => !k.startsWith('lg')).map(([k, v]) => `${k} (${Array.isArray(v) ? v.join('/') : v})`).join(', ') + '. Cristal líquido: lgRefraccion, lgCromatica, lgDesenfoque, lgTinte, lgLupa (números).', { clave: 'nombre del ajuste', valor: 'valor nuevo' }, ['clave', 'valor']],
-  ['buscar_archivos', 'Busca archivos y carpetas del usuario por nombre.', { texto: 'lo que buscar' }, ['texto']],
-  ['abrir', 'Abre un archivo, una carpeta o una web (https://...) con su programa.', { destino: 'ruta o dirección web' }, ['destino']],
-  ['leer_archivo', 'Lee un archivo de texto.', { ruta: 'ruta del archivo (~ es la carpeta personal)' }, ['ruta']],
-  ['escribir_archivo', 'Crea o reescribe un archivo de texto.', { ruta: 'ruta del archivo', contenido: 'texto completo' }, ['ruta', 'contenido']],
+  // Descripciones cortas a proposito: en un PC sin grafica cada palabra de aqui se lee antes de contestar
+  ['ejecutar_comando', LINUX ? 'Ejecuta un comando bash y devuelve la salida (para administrador: pkexec).' : 'Ejecuta un comando de PowerShell y devuelve la salida.', { comando: '' }, ['comando']],
+  ['abrir_app', 'Abre una app instalada por su nombre.', { nombre: '' }, ['nombre']],
+  ['controlar_ventana', 'Enfoca, minimiza, maximiza o cierra una ventana abierta, buscándola por su título.', { titulo: '', accion: ['enfocar', 'minimizar', 'maximizar', 'cerrar'] }, ['titulo', 'accion']],
+  ['volumen', 'Pone el volumen (0-100) o lo silencia.', { nivel: '', silencio: ['true', 'false'] }, []],
+  ['brillo', 'Pone el brillo de la pantalla (0-100).', { nivel: '' }, ['nivel']],
+  ['cambiar_ajuste', 'Cambia un ajuste de Antuan: dockEstilo (liquido/barra/gota/clasico), edge (bottom/left/right/top), dockSize (32-80), liquidGlass, magnify, keepAwake (true/false), logoStyle (color/umbra/original), accent (#rrggbb).', { clave: '', valor: '' }, ['clave', 'valor']],
+  ['buscar_archivos', 'Busca archivos y carpetas por nombre.', { texto: '' }, ['texto']],
+  ['abrir', 'Abre un archivo, una carpeta o una web.', { destino: '' }, ['destino']],
   ...(LINUX ? [
-    ['pulsar_teclas', 'Pulsa una combinación de teclas en la ventana activa (formato xdotool: ctrl+c, super, alt+F4, Return).', { teclas: 'la combinación' }, ['teclas']],
-    ['escribir_texto', 'Escribe texto con el teclado en la ventana activa.', { texto: 'el texto' }, ['texto']]
+    ['pulsar_teclas', 'Pulsa teclas en la ventana activa (como xdotool: ctrl+c, alt+F4, Return).', { teclas: '' }, ['teclas']],
+    ['escribir_texto', 'Escribe texto en la ventana activa.', { texto: '' }, ['texto']]
   ] : []),
-  ['energia', 'Bloquea, suspende, reinicia o apaga el PC.', { accion: 'bloquear | suspender | reiniciar | apagar' }, ['accion']],
-  ['info_sistema', 'Memoria, disco, procesador, batería, red y uso actual del PC.', {}, []]
+  ['energia', 'Bloquea, suspende, reinicia o apaga el PC.', { accion: ['bloquear', 'suspender', 'reiniciar', 'apagar'] }, ['accion']],
+  ['info_sistema', 'Estado del PC: memoria, disco, batería, red y lo que más gasta.', {}, []]
 ].map(([name, description, props, required]) => ({
   type: 'function',
-  function: { name, description, parameters: { type: 'object', properties: Object.fromEntries(Object.entries(props).map(([k, d]) => [k, { type: 'string', description: d }])), required } }
+  function: { name, description, parameters: { type: 'object', properties: Object.fromEntries(Object.entries(props).map(([k, d]) => [k, Array.isArray(d) ? { type: 'string', enum: d } : { type: 'string' }])), required } }
 }));
 
 const buscarApp = (nombre) => {
@@ -210,7 +214,7 @@ async function usar(nombre, a = {}) {
       return sh(c);
     }
     case 'abrir_app': {
-      const ap = buscarApp(a.nombre); if (!ap) return { error: 'No encuentro esa app instalada. Usa listar_apps.' };
+      const ap = buscarApp(a.nombre); if (!ap) return { error: 'No encuentro esa app instalada', apps_instaladas: ctx.catalogo().map((x) => x.display || x.name).filter(Boolean).slice(0, 60) };
       ipcMain.emit('launch', {}, ap.id); return { ok: true, abierta: ap.display || ap.name };
     }
     case 'listar_apps': {
@@ -221,7 +225,7 @@ async function usar(nombre, a = {}) {
     case 'controlar_ventana': {
       const t = String(a.titulo || '').toLowerCase();
       const w = ctx.ventanas().find((x) => `${x.title} ${x.exe} ${x.cls || ''}`.toLowerCase().includes(t));
-      if (!w) return { error: 'No hay ninguna ventana así abierta' };
+      if (!w) return { error: 'No hay ninguna ventana así abierta', ventanas_abiertas: ctx.ventanas().map((x) => x.title) };
       const acc = { enfocar: 'focus', minimizar: 'minimize', cerrar: 'close', maximizar: 'maximize' }[String(a.accion).toLowerCase()];
       if (!acc) return { error: 'Acción no válida' };
       if (acc === 'maximize') {
@@ -288,18 +292,20 @@ async function usar(nombre, a = {}) {
 // en un PC lento no vuelve a procesar las instrucciones y las herramientas en cada pregunta.
 function sistema() {
   return `Eres Antuan AI, el asistente de ${LINUX ? 'Antuan OS (Debian Linux)' : 'Antuan en Windows'}. Usuario: ${os.userInfo().username}, carpeta personal: ${os.homedir()}.
-Habla en español, de tú y breve. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}`;
+Habla en español, de tú. Contesta corto (una o dos frases) y seguro, sin dudar en voz alta. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}${hibrido(modelo()) ? ' /no_think' : ''}`;
 }
+// "think" solo se manda a los modelos que lo entienden (a los demas Ollama les da error)
+const pensar = () => (hibrido(modelo()) ? { think: false } : {});
 const conHora = (t) => `${t}\n\n(${new Date().toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })})`;
 
 // En un PC lento se gana mucho dejando el modelo cargado y con las instrucciones ya leidas antes de la primera pregunta
-const OPCIONES = { temperature: 0.4, num_ctx: 4096 };
+const OPCIONES = { temperature: 0.4, num_ctx: 4096, num_predict: 400 };   // respuestas cortas: en un PC lento cada palabra cuenta
 let calentado = false;
 async function precalentar() {
   if (calentado || ocupado) return;
   try {
     calentado = true;
-    await peticion('/api/chat', { model: modelo(), messages: [{ role: 'system', content: sistema() }, { role: 'user', content: 'hola' }], tools: HERRAMIENTAS, stream: false, think: false, keep_alive: '2h', options: { ...OPCIONES, num_predict: 1 } });
+    await peticion('/api/chat', { model: modelo(), messages: [{ role: 'system', content: sistema() }, { role: 'user', content: 'hola' }], tools: HERRAMIENTAS, stream: false, ...pensar(), keep_alive: '2h', options: { ...OPCIONES, num_predict: 1 } });
   } catch { calentado = false; }
 }
 
@@ -317,7 +323,7 @@ async function enviar(texto) {
       const msg = { role: 'assistant', content: '', tool_calls: [] };
       let dentroPensar = false;
       emitir('pensando');
-      await peticion('/api/chat', { model: modelo(), messages: historial, tools: HERRAMIENTAS, stream: true, think: false, keep_alive: '2h', options: OPCIONES }, (l) => {
+      await peticion('/api/chat', { model: modelo(), messages: historial, tools: HERRAMIENTAS, stream: true, ...pensar(), keep_alive: '2h', options: OPCIONES }, (l) => {
         if (l.error) throw new Error(l.error);
         const m = l.message || {};
         if (m.tool_calls) msg.tool_calls.push(...m.tool_calls);

@@ -1,11 +1,10 @@
 {
-  "version": "1.3.2",
+  "version": "1.3.3",
   "fecha": "2026-11-03",
   "cambios": [
-    "Antuan AI se adapta a PCs sencillos: sin tarjeta gráfica elige un modelo más ligero que contesta en segundos",
-    "Antuan AI deja el modelo cargado y las instrucciones ya leídas al encender, para que la primera respuesta no espere",
-    "Mientras piensa, el widget lo dice con los segundos que lleva",
-    "Se borra el modelo anterior si cambia por uno más ligero, para liberar disco",
-    "Antuan AI se instala entera con la actualización: el motor y el modelo"
+    "Antuan AI contesta directamente: modelos sin «modo pensar» (Qwen 3 4B Instruct y Qwen 2.5), nada de razonar en inglés antes de responder",
+    "Mucho más rápida en PCs sin tarjeta gráfica: modelo más ligero, la mitad de instrucciones y respuestas cortas",
+    "El modelo se carga al encender, para que el primer mensaje no espere",
+    "Se borra el modelo anterior para liberar disco"
   ]
 }
