@@ -338,25 +338,61 @@ function abrirWeb(url, navegador) {
 }
 
 // ---------------------------------------------------------------- Conversacion
+// Los modelos pequenos, con las "tools" normales, DICEN lo que van a hacer y no lo hacen. Por eso Ollama obliga a
+// contestar siempre con este JSON (format): lo que dice y la lista de acciones, con los nombres exactos de las
+// herramientas. Si hay que hacer algo, tiene que estar en "acciones", y Antuan lo ejecuta.
+const NOMBRES_H = HERRAMIENTAS.map((h) => h.function.name);
+const ESQUEMA = {
+  type: 'object',
+  properties: {
+    respuesta: { type: 'string' },
+    acciones: { type: 'array', maxItems: 6, items: { type: 'object', properties: { herramienta: { type: 'string', enum: NOMBRES_H }, args: { type: 'object' } }, required: ['herramienta', 'args'] } }
+  },
+  required: ['respuesta', 'acciones']
+};
+// Herramientas que solo hacen algo (no traen datos que haya que contar): si todas salen bien, no hace falta otra vuelta
+const SOLO_HACEN = new Set(['abrir_app', 'controlar_ventana', 'volumen', 'brillo', 'cambiar_ajuste', 'abrir', 'pulsar_teclas', 'escribir_texto', 'energia', 'anadir_nota']);
+const firma = (h) => {
+  const p = h.function.parameters.properties;
+  return `${h.function.name}(${Object.entries(p).map(([k, v]) => (v.enum ? `${k}: ${v.enum.join('|')}` : k)).join(', ')}): ${h.function.description}`;
+};
+
 // El texto del sistema no cambia nunca (la hora va en cada mensaje): asi Ollama reutiliza lo ya leido y
-// en un PC lento no vuelve a procesar las instrucciones y las herramientas en cada pregunta.
+// en un PC lento no vuelve a procesar las instrucciones en cada pregunta.
 function sistema() {
   return `Eres Antuan AI, el asistente de ${LINUX ? 'Antuan OS (Debian Linux)' : 'Antuan en Windows'}. Usuario: ${os.userInfo().username}, carpeta personal: ${os.homedir()}.
-Habla en español, de tú. Contesta corto (una o dos frases) y seguro, sin dudar en voz alta. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados. Para información de internet usa buscar_info; para guardarla en Notas, anadir_nota con pegar_resultado=true.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}${hibrido(modelo()) ? ' /no_think' : ''}`;
+Contestas SIEMPRE con JSON: "respuesta" (lo que dices, en español, de tú, una frase corta y segura) y "acciones" (lo que haces en el PC).
+Si te piden hacer algo, pon YA en "acciones" todas las acciones necesarias, en orden. Nunca digas que lo vas a hacer sin ponerlas. Si solo es charla, "acciones": [].
+Después de hacer las acciones recibirás sus resultados: si falta algo, pon más acciones; si ya está, "acciones": [] y di en una frase qué has hecho. No inventes resultados.
+Herramientas:
+${HERRAMIENTAS.map((h) => '- ' + firma(h)).join('\n')}
+Información de internet: buscar_info; para guardarla en Notas, después anadir_nota con pegar_resultado "true".${LINUX ? ' Instalar programas: ejecutar_comando con "pkexec apt-get install -y <paquete>".' : ''}
+Ejemplos:
+"hola" -> {"respuesta":"¡Hola! ¿Qué hago por ti?","acciones":[]}
+"abre firefox y sube el volumen" -> {"respuesta":"Abro Firefox y subo el volumen.","acciones":[{"herramienta":"abrir_app","args":{"nombre":"firefox"}},{"herramienta":"volumen","args":{"nivel":"80"}}]}
+"busca info de los gatos y ponla en notas" -> {"respuesta":"Busco sobre los gatos y lo pego en tus notas.","acciones":[{"herramienta":"buscar_info","args":{"tema":"gatos"}},{"herramienta":"anadir_nota","args":{"pegar_resultado":"true"}}]}${hibrido(modelo()) ? '\n/no_think' : ''}`;
 }
 // "think" solo se manda a los modelos que lo entienden (a los demas Ollama les da error)
 const pensar = () => (hibrido(modelo()) ? { think: false } : {});
 const conHora = (t) => `${t}\n\n(${new Date().toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })})`;
 
 // En un PC lento se gana mucho dejando el modelo cargado y con las instrucciones ya leidas antes de la primera pregunta
-const OPCIONES = { temperature: 0.4, num_ctx: 4096, num_predict: 400 };   // respuestas cortas: en un PC lento cada palabra cuenta
+const OPCIONES = { temperature: 0.2, num_ctx: 4096, num_predict: 500 };
+const pedido = (messages, extra = {}) => ({ model: modelo(), messages, format: ESQUEMA, ...pensar(), keep_alive: '2h', options: OPCIONES, ...extra });
 let calentado = false;
 async function precalentar() {
   if (calentado || ocupado) return;
   try {
     calentado = true;
-    await peticion('/api/chat', { model: modelo(), messages: [{ role: 'system', content: sistema() }, { role: 'user', content: 'hola' }], tools: HERRAMIENTAS, stream: false, ...pensar(), keep_alive: '2h', options: { ...OPCIONES, num_predict: 1 } });
+    await peticion('/api/chat', pedido([{ role: 'system', content: sistema() }, { role: 'user', content: 'hola' }], { stream: false, options: { ...OPCIONES, num_predict: 1 } }));
   } catch { calentado = false; }
+}
+
+// Saca lo que va escrito en "respuesta" mientras llega el JSON, para ensenarlo palabra a palabra
+function respuestaParcial(json) {
+  const m = /"respuesta"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(json);
+  if (!m) return '';
+  try { return JSON.parse('"' + m[1].replace(/\\$/, '') + '"'); } catch { return ''; }
 }
 
 async function enviar(texto) {
@@ -368,35 +404,43 @@ async function enviar(texto) {
   if (!historial.length) historial.push({ role: 'system', content: '' });
   historial[0].content = sistema();
   historial.push({ role: 'user', content: conHora(String(texto)) });
+  const hechas = new Set();
   try {
-    for (let paso = 0; paso < 10; paso++) {
-      const msg = { role: 'assistant', content: '', tool_calls: [] };
-      let dentroPensar = false;
+    for (let paso = 0; paso < 6; paso++) {
+      let crudo = '', dicho = '';
       emitir('pensando');
-      await peticion('/api/chat', { model: modelo(), messages: historial, tools: HERRAMIENTAS, stream: true, ...pensar(), keep_alive: '2h', options: OPCIONES }, (l) => {
+      await peticion('/api/chat', pedido(historial, { stream: true }), (l) => {
         if (l.error) throw new Error(l.error);
-        const m = l.message || {};
-        if (m.tool_calls) msg.tool_calls.push(...m.tool_calls);
-        if (m.content) {
-          // por si la version de Ollama no entiende think:false, se quita el bloque <think>
-          let c = m.content;
-          if (c.includes('<think>')) { dentroPensar = true; c = c.split('<think>')[0]; }
-          if (dentroPensar && c.includes('</think>')) { dentroPensar = false; c = c.split('</think>').pop(); }
-          else if (dentroPensar) c = '';
-          if (c) { msg.content += c; emitir('texto', { texto: c }); }
-        }
+        const c = l.message && l.message.content;
+        if (!c) return;
+        crudo += c;
+        const r = respuestaParcial(crudo);
+        if (r.length > dicho.length && r.startsWith(dicho)) { emitir('texto', { texto: r.slice(dicho.length) }); dicho = r; }
       }, { parable: true });
-      if (!msg.tool_calls.length) delete msg.tool_calls;
-      historial.push(msg);
-      if (!msg.tool_calls) break;
-      for (const tc of msg.tool_calls) {
-        const f = tc.function || {}; let args = f.arguments || {};
-        if (typeof args === 'string') try { args = JSON.parse(args); } catch { args = {}; }
-        emitir('herramienta', { nombre: f.name, args });
-        let res; try { res = await usar(f.name, args); } catch (err) { res = { error: err.message }; }
-        emitir('resultado', { nombre: f.name, ok: !res.error, error: res.error });
-        historial.push({ role: 'tool', tool_name: f.name, content: JSON.stringify(res).slice(0, 5000) });
+      let j; try { j = JSON.parse(crudo.replace(/^[\s\S]*?(?=\{)/, '')); } catch { j = { respuesta: dicho || crudo.trim(), acciones: [] }; }
+      if (!dicho && j.respuesta) emitir('texto', { texto: j.respuesta });
+      historial.push({ role: 'assistant', content: JSON.stringify({ respuesta: j.respuesta || '', acciones: j.acciones || [] }) });
+      // las que ya se hicieron en esta peticion no se repiten (el modelo a veces las vuelve a poner)
+      const acciones = (Array.isArray(j.acciones) ? j.acciones : []).filter((a) => a && NOMBRES_H.includes(a.herramienta) && !hechas.has(JSON.stringify(a)));
+      if (!acciones.length) break;
+      const resultados = [];
+      for (const a of acciones) {
+        hechas.add(JSON.stringify(a));
+        const args = a.args && typeof a.args === 'object' ? a.args : {};
+        emitir('herramienta', { nombre: a.herramienta, args });
+        let res; try { res = await usar(a.herramienta, args); } catch (err) { res = { error: err.message }; }
+        emitir('resultado', { nombre: a.herramienta, ok: !res.error, error: res.error });
+        resultados.push({ herramienta: a.herramienta, resultado: res });
       }
+      // si solo eran acciones de hacer y han salido todas bien, ya esta: lo dicho al principio vale ("Abro Firefox...")
+      const pega = resultados.some((r) => r.herramienta === 'anadir_nota');   // buscar y pegar en Notas: ya esta todo
+      if (resultados.every((r) => (SOLO_HACEN.has(r.herramienta) || (pega && r.herramienta === 'buscar_info')) && !r.resultado.error)) {
+        historial.push({ role: 'user', content: 'Resultados: todo hecho.' });
+        historial.push({ role: 'assistant', content: JSON.stringify({ respuesta: 'Hecho.', acciones: [] }) });
+        break;
+      }
+      historial.push({ role: 'user', content: `Resultados (ya están hechas, no las repitas): ${JSON.stringify(resultados).slice(0, 5000)}\nSi falta algo, pon las acciones que faltan; si no, "acciones": [] y di en una frase qué has hecho o lo que has encontrado.` });
+      emitir('texto', { texto: '\n' });
     }
   } catch (err) {
     if (err.message !== 'cancelado') emitir('error', { texto: err.message });

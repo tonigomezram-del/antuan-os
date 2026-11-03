@@ -1,12 +1,12 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "fecha": "2026-11-03",
   "cambios": [
+    "Antuan AI ya HACE lo que le pides en vez de solo decirlo: siempre contesta con las acciones que va a hacer, y Antuan las ejecuta",
+    "Buscar y pegar en Notas se hace de una vez, sin esperas extra",
     "Optimización: el cristal líquido ya no se recalcula entero cada vez que algo cambia en pantalla. Escribir o mover cosas gasta hasta 7 veces menos CPU y va fluido a 60 fps, con el mismo aspecto",
     "Arrastrar widgets va 3 veces más fluido (sin tarjeta gráfica, de 7 a 26 fps)",
     "Antuan OS usa la tarjeta gráfica para dibujar si el PC tiene una de verdad",
-    "Cambiar de ventana ya no congela el escritorio un instante en PCs lentos",
-    "Antuan AI busca información en internet (Wikipedia), te abre la página en el navegador y la pega en tus Notas al momento",
-    "Antuan AI en PCs sin tarjeta gráfica usa siempre el modelo rápido (Qwen 2.5 1.5B), aunque tengan mucha memoria"
+    "Cambiar de ventana ya no congela el escritorio un instante en PCs lentos"
   ]
 }
