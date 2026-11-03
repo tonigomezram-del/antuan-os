@@ -17,12 +17,35 @@ function modeloPorMemoria() {
   return gb >= 14 ? 'qwen3:8b' : gb >= 7 ? 'qwen3:4b' : 'qwen3:1.7b';
 }
 
-let ctx = null;                 // lo que pasa main.js: config, catalogo, ventanas, sistema, buscador, envio al escritorio
+// Nombre que se ensena al usuario y lo que ocupa (para saber que se va a descargar)
+const FICHAS = { 'qwen3:8b': ['Qwen 3 8B', '5,2 GB'], 'qwen3:4b': ['Qwen 3 4B', '2,6 GB'], 'qwen3:1.7b': ['Qwen 3 1.7B', '1,4 GB'] };
+function ficha(m) {
+  const [nombre, peso] = FICHAS[m] || [m, ''];
+  return { modelo: m, nombre, peso, ram: Math.round(os.totalmem() / 2 ** 30) };
+}
+
+let ctx = null;                // lo que pasa main.js: config, catalogo, ventanas, sistema, buscador, envio al escritorio
 let historial = [];
 let ocupado = false, cancelar = null, descargando = null;
 const pendientes = new Map();   // confirmaciones esperando al usuario
 
-const modelo = () => (ctx.config().iaModelo || modeloPorMemoria());
+// En Antuan OS la actualizacion elige el modelo, lo descarga y deja aqui el progreso
+const DIR_IA = '/var/lib/antuan-ia';
+const leer = (f) => { try { return fs.readFileSync(path.join(DIR_IA, f), 'utf8').trim(); } catch { return ''; } };
+const modelo = () => (ctx.config().iaModelo || (LINUX && leer('modelo')) || modeloPorMemoria());
+// Progreso de la descarga que lanzo la actualizacion (ultima linea de /api/pull), o null si no hay ninguna en marcha
+function descargaDeActualizacion() {
+  if (!LINUX) return null;
+  const t = leer('progreso.json'); if (!t) return null;
+  let l; try { l = JSON.parse(t); } catch { return null; }
+  if (l.error) return { error: l.error };
+  if (l.status === 'success') return null;
+  let viejo = true; try { viejo = Date.now() - fs.statSync(path.join(DIR_IA, 'progreso.json')).mtimeMs > 180000; } catch { }
+  if (viejo) return null;   // se corto sin avisar (apagaste el PC, por ejemplo)
+  return l.total
+    ? { progreso: Math.round(l.completed / l.total * 100) || 0, texto: `Descargando ${ficha(modelo()).nombre}: ${((l.completed || 0) / 2 ** 30).toFixed(1)} de ${(l.total / 2 ** 30).toFixed(1)} GB` }
+    : { progreso: 0, texto: l.status === 'esperando al motor' ? 'Arrancando el motor de IA…' : 'Preparando la descarga…' };
+}
 const emitir = (tipo, datos = {}) => ctx.enviar('ia', Object.assign({ tipo }, datos));
 
 // ---------------------------------------------------------------- Ollama
@@ -61,17 +84,23 @@ const ollamaInstalado = () => LINUX
 
 async function estado() {
   const m = modelo();
-  if (descargando) return { estado: 'descargando', modelo: m, ...descargando };
+  if (descargando) return { estado: 'descargando', ...ficha(m), ...descargando };
   let tags = null;
   try { tags = await peticion('/api/tags', null, null, { timeout: 2500 }); } catch { }
   if (!tags) {
     // instalado pero parado (en Windows no siempre arranca solo): se intenta arrancar
-    if (ollamaInstalado()) { arrancarOllama(); return { estado: 'arrancando', modelo: m }; }
-    return { estado: 'sin-ollama', modelo: m, linux: LINUX };
+    if (ollamaInstalado()) { arrancarOllama(); return { estado: 'arrancando', ...ficha(m) }; }
+    return { estado: 'sin-ollama', ...ficha(m), linux: LINUX };
   }
   const tiene = (tags.models || []).some((x) => x.name === m || x.name === m + ':latest');
-  if (!tiene) { descargar(); return { estado: 'descargando', modelo: m, ...(descargando || {}) }; }
-  return { estado: 'listo', modelo: m };
+  if (!tiene) {
+    // lo normal: lo esta bajando la actualizacion. Si no hay ninguna descarga en marcha, la empieza el widget (no pide contrasena)
+    const act = descargaDeActualizacion();
+    if (act && act.error) return { estado: 'error', ...ficha(m), texto: act.error };
+    if (act) return { estado: 'descargando', ...ficha(m), ...act };
+    descargar(); return { estado: 'descargando', ...ficha(m), ...(descargando || {}) };
+  }
+  return { estado: 'listo', ...ficha(m) };
 }
 
 let arrancado = 0;
@@ -88,20 +117,25 @@ function descargar() {
   const m = modelo();
   peticion('/api/pull', { model: m, stream: true }, (l) => {
     if (l.error) throw new Error(l.error);
-    if (l.total) descargando = { progreso: Math.round(l.completed / l.total * 100) || 0, texto: `Descargando ${m}: ${(l.completed / 2 ** 30).toFixed(1)} de ${(l.total / 2 ** 30).toFixed(1)} GB` };
+    if (l.total) descargando = { progreso: Math.round(l.completed / l.total * 100) || 0, texto: `Descargando ${ficha(m).nombre}: ${(l.completed / 2 ** 30).toFixed(1)} de ${(l.total / 2 ** 30).toFixed(1)} GB` };
     else descargando = { progreso: descargando.progreso, texto: l.status || '…' };
-    emitir('estado', { estado: 'descargando', modelo: m, ...descargando });
-  }).then(() => { descargando = null; emitir('estado', { estado: 'listo', modelo: m }); })
-    .catch((e) => { descargando = null; emitir('estado', { estado: 'error', modelo: m, texto: 'No se pudo descargar el modelo: ' + e.message }); });
+    emitir('estado', { estado: 'descargando', ...ficha(m), ...descargando });
+  }).then(() => { descargando = null; emitir('estado', { estado: 'listo', recien: true, ...ficha(m) }); })
+    .catch((e) => { descargando = null; emitir('estado', { estado: 'error', ...ficha(m), texto: 'No se pudo descargar el modelo: ' + e.message }); });
 }
 
 function instalarOllama() {
-  // Linux: el instalador oficial (pide la contrasena). Windows: winget.
+  // Linux: la actualizacion de Antuan, que instala el motor y descarga el modelo (pide la contrasena y reinicia el escritorio).
+  // Windows: winget instala Ollama y el widget baja el modelo.
   const p = LINUX
-    ? spawn('pkexec', ['bash', '-c', 'curl -fsSL https://ollama.com/install.sh | sh'], { stdio: 'ignore' })
+    ? spawn('pkexec', ['bash', '-c', 'curl -fsSL https://raw.githubusercontent.com/tonigomezram-del/antuan-os/main/actualizar.sh | bash'], { stdio: 'ignore' })
     : spawn('winget', ['install', '-e', '--id', 'Ollama.Ollama', '--accept-source-agreements', '--accept-package-agreements'], { stdio: 'ignore', windowsHide: true });
   p.on('error', () => emitir('estado', { estado: 'error', texto: 'No se pudo lanzar el instalador' }));
-  p.on('exit', (c) => (c === 0 ? estado().then((e) => emitir('estado', e)) : emitir('estado', { estado: 'error', texto: 'La instalación no terminó' })));
+  p.on('exit', (c) => {
+    if (c === 0) return estado().then((e) => emitir('estado', e));
+    // pkexec: 126 = has cancelado la contrasena, 127 = contrasena incorrecta
+    emitir('estado', { estado: 'error', texto: c === 126 || c === 127 ? 'No se ha puesto la contraseña. Vuelve a intentarlo.' : 'La instalación no terminó. Prueba desde Centro > Actualizaciones.' });
+  });
   return true;
 }
 

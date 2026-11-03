@@ -16,12 +16,35 @@ cp "$NUEVO"/*.js "$NUEVO"/*.ps1 "$NUEVO"/*.json "$APP"/ 2>/dev/null || true
 cp -r "$NUEVO"/ui/. "$APP"/ui/
 chmod -R a+rX "$APP"
 rm -rf "$T"
-# Antuan AI: el motor de IA local (Ollama). El modelo lo descarga luego el propio escritorio, con el progreso en su widget.
-if ! command -v ollama >/dev/null 2>&1; then
+# Antuan AI: el motor (Ollama) y el modelo, que se elige por la memoria del PC. Ollama necesita zstd para descomprimirse.
+echo "[ 75%] Antuan AI: preparando el motor de IA..."
+apt-get install -y zstd xdotool >/dev/null 2>&1 || true
+if ! command -v ollama >/dev/null 2>&1 && [ ! -x /usr/local/bin/ollama ]; then
   echo "[ 80%] Instalando el motor de Antuan AI (Ollama, puede tardar unos minutos)..."
-  curl -fsSL https://ollama.com/install.sh | sh || echo "No se pudo instalar Ollama: se puede instalar luego desde el widget Antuan AI"
+  curl -fsSL https://ollama.com/install.sh | sh || echo "No se pudo instalar Ollama"
 fi
-command -v xdotool >/dev/null 2>&1 || apt-get install -y xdotool >/dev/null 2>&1 || true
+systemctl enable --now ollama >/dev/null 2>&1 || true
+RAM_GB=$(awk '/MemTotal/ {printf "%d", $2/1048576}' /proc/meminfo)
+if [ "$RAM_GB" -ge 14 ]; then MODELO=qwen3:8b; elif [ "$RAM_GB" -ge 7 ]; then MODELO=qwen3:4b; else MODELO=qwen3:1.7b; fi
+IA=/var/lib/antuan-ia; mkdir -p "$IA"; chmod 755 "$IA"; echo "$MODELO" > "$IA/modelo"
+if command -v ollama >/dev/null 2>&1 || [ -x /usr/local/bin/ollama ]; then
+  echo "[ 85%] Antuan AI: descargando el modelo $MODELO ($RAM_GB GB de memoria). Sigue en segundo plano; el progreso sale en el widget."
+  # se descarga aparte, para que el escritorio vuelva ya; cada linea de progreso se deja en $IA/progreso.json
+  cat > "$IA/descargar.sh" <<'FIN'
+#!/bin/bash
+IA=/var/lib/antuan-ia; M="$1"
+echo "{\"status\":\"esperando al motor\",\"model\":\"$M\"}" > "$IA/progreso.json"
+for i in $(seq 90); do curl -fs http://127.0.0.1:11434/api/tags >/dev/null && break; sleep 1; done
+curl -sN http://127.0.0.1:11434/api/pull -d "{\"model\":\"$M\"}" | while IFS= read -r l; do printf '%s\n' "$l" >"$IA/progreso.tmp" && mv -f "$IA/progreso.tmp" "$IA/progreso.json"; done
+grep -q '"status":"success"' "$IA/progreso.json" || echo '{"error":"La descarga se ha cortado. Vuelve a actualizar Antuan para reintentarlo."}' > "$IA/progreso.json"
+chmod 644 "$IA/progreso.json"
+FIN
+  chmod 755 "$IA/descargar.sh"
+  setsid nohup "$IA/descargar.sh" "$MODELO" >/dev/null 2>&1 < /dev/null &
+else
+  echo '{"error":"No se pudo instalar el motor de Antuan AI. Revisa la conexión y vuelve a actualizar."}' > "$IA/progreso.json"
+fi
+chmod 644 "$IA"/*.json "$IA/modelo" 2>/dev/null || true
 echo "[ 90%] Reiniciando el escritorio Antuan..."
 pkill -TERM -f '^/opt/umbra/umbra' || true   # la sesion lo vuelve a abrir solo en un segundo
 echo "[100%] Antuan actualizado."

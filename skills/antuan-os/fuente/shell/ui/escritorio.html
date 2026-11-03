@@ -166,6 +166,7 @@ body.cards .group { box-shadow: 0 22px 50px -22px rgba(0,0,0,.75), inset 0 1.6px
 /* con conversacion, el cristal se oscurece para que el texto se lea sobre cualquier cosa */
 .wd[data-w="ia"].lg:has(.ia-chat:not(:empty)) { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,.72); }
 .wd[data-w="ia"] h4 { margin-bottom: 8px; }
+.ia-mod { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--faint); }
 .ia-chat:not(:empty) + .ia-est + .ia-in, .ia-chat:not(:empty) ~ .ia-in { margin-top: 12px; }
 .ia-in:first-child, .ia-chat:empty ~ .ia-in { margin-top: 0; }
 </style>
@@ -502,17 +503,31 @@ const RENDER = {
     const bajar = () => { chat.scrollTop = chat.scrollHeight; };
     const add = (cls, txt) => { const d = document.createElement('div'); d.className = cls; d.textContent = txt; chat.appendChild(d); bajar(); return d; };
     const NOMBRES = { ejecutar_comando: 'Terminal', abrir_app: 'Abrir', listar_apps: 'Apps', listar_ventanas: 'Ventanas', controlar_ventana: 'Ventana', volumen: 'Volumen', brillo: 'Brillo', cambiar_ajuste: 'Ajuste', buscar_archivos: 'Buscar', abrir: 'Abrir', leer_archivo: 'Leer', escribir_archivo: 'Guardar', pulsar_teclas: 'Teclas', escribir_texto: 'Escribir', energia: 'Energía', info_sistema: 'Sistema' };
+    let instalando = false, pintado = '';
+    const h4 = b.closest('.wd').querySelector('h4');
     const ponerEstado = (e) => {
+      // el modelo en uso, junto al titulo
+      if (e.modelo && h4) { let s = $('.ia-mod', h4); if (!s) { s = document.createElement('span'); s.className = 'ia-mod'; h4.insertBefore(s, $('.x', h4)); } s.textContent = `${e.nombre || e.modelo}${e.peso ? ' · ' + e.peso : ''}`; }
       const listo = e.estado === 'listo';
+      if (listo || e.estado === 'descargando' || e.estado === 'error') instalando = false;
+      if (instalando) return;   // mientras se instala no se vuelve a pintar el boton
       inp.disabled = !listo; est.hidden = listo;
+      const clave = e.estado + '|' + (e.estado === 'descargando' ? '' : e.texto || '');
+      if (e.estado === 'descargando') {
+        if (pintado !== clave) est.innerHTML = `<span class="tx"></span><div class="bar"><i></i></div>`;
+        $('.tx', est).textContent = e.texto || 'Descargando el modelo…'; $('.bar i', est).style.setProperty('--p', (e.progreso || 0) + '%');
+        pintado = clave; return;
+      }
+      if (pintado === clave) return; pintado = clave;
       if (listo) { est.innerHTML = ''; return; }
-      if (e.estado === 'sin-ollama') {
-        est.innerHTML = `Antuan AI funciona en tu PC, gratis y sin límites. Falta instalar el motor (Ollama) y el modelo (unos GB).<br><button class="btnw" type="button">Instalar Antuan AI</button>`;
-        $('button', est).onclick = (ev) => { ev.target.disabled = true; ev.target.textContent = 'Instalando… (te pedirá la contraseña)'; U.ask('ia.instalar'); };
-      } else if (e.estado === 'descargando') {
-        est.innerHTML = `${e.texto || 'Descargando el modelo…'}<div class="bar"><i style="--p:${e.progreso || 0}%"></i></div>`;
-      } else if (e.estado === 'arrancando') est.textContent = 'Arrancando Antuan AI…';
-      else if (e.estado === 'error') est.innerHTML = `<span class="err"></span>`, $('.err', est).textContent = e.texto || 'Algo ha fallado';
+      const boton = (txt) => {
+        const x = document.createElement('button'); x.className = 'btnw'; x.type = 'button'; x.textContent = txt;
+        x.onclick = () => { instalando = true; x.disabled = true; x.textContent = 'Instalando… (pide la contraseña y reinicia el escritorio)'; U.ask('ia.instalar'); };
+        est.append(document.createElement('br'), x);
+      };
+      if (e.estado === 'sin-ollama') { est.textContent = `Antuan AI funciona en tu PC, gratis y sin límites. Falta instalar el motor y el modelo ${e.nombre || ''} (${e.peso || 'unos GB'}).`; boton('Instalar Antuan AI'); }
+      else if (e.estado === 'arrancando') est.textContent = 'Arrancando Antuan AI…';
+      else if (e.estado === 'error') { est.innerHTML = '<span class="err"></span>'; $('.err', est).textContent = e.texto || 'Algo ha fallado'; boton('Reintentar'); }
     };
     const ocupado = (si) => { hablando = si; btn.textContent = si ? '■' : '➤'; btn.classList.toggle('parar', si); btn.setAttribute('aria-label', si ? 'Parar' : 'Enviar'); };
     window._iaEvento = (e) => {
