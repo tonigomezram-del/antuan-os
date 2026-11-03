@@ -502,7 +502,7 @@ const RENDER = {
     let burbuja = null, hablando = false;
     const bajar = () => { chat.scrollTop = chat.scrollHeight; };
     const add = (cls, txt) => { const d = document.createElement('div'); d.className = cls; d.textContent = txt; chat.appendChild(d); bajar(); return d; };
-    const NOMBRES = { ejecutar_comando: 'Terminal', abrir_app: 'Abrir', listar_apps: 'Apps', listar_ventanas: 'Ventanas', controlar_ventana: 'Ventana', volumen: 'Volumen', brillo: 'Brillo', cambiar_ajuste: 'Ajuste', buscar_archivos: 'Buscar', abrir: 'Abrir', leer_archivo: 'Leer', escribir_archivo: 'Guardar', pulsar_teclas: 'Teclas', escribir_texto: 'Escribir', energia: 'Energía', info_sistema: 'Sistema' };
+    const NOMBRES = { ejecutar_comando: 'Terminal', abrir_app: 'Abrir', listar_apps: 'Apps', listar_ventanas: 'Ventanas', controlar_ventana: 'Ventana', volumen: 'Volumen', brillo: 'Brillo', cambiar_ajuste: 'Ajuste', buscar_archivos: 'Buscar', abrir: 'Abrir', leer_archivo: 'Leer', escribir_archivo: 'Guardar', pulsar_teclas: 'Teclas', escribir_texto: 'Escribir', energia: 'Energía', info_sistema: 'Sistema', buscar_info: 'Internet', anadir_nota: 'Notas' };
     let instalando = false, pintado = '';
     const h4 = b.closest('.wd').querySelector('h4');
     const ponerEstado = (e) => {
@@ -572,7 +572,24 @@ const RENDER = {
   }
 };
 // los avisos de la IA llegan siempre al widget que este montado en ese momento
-U.on('ia', (e) => { if (window._iaEvento) window._iaEvento(e); });
+U.on('ia', (e) => {
+  // la IA ha escrito en Notas: se ve al momento y, si el widget estaba oculto, aparece (sin rehacer los demas)
+  if (e.tipo === 'notas') {
+    let ta = $('.wd[data-w="notas"] textarea');
+    if (!ta) {
+      saveW('notas', { on: true });
+      const el = document.createElement('section');
+      el.className = 'wd'; el.dataset.w = 'notas';
+      el.innerHTML = `<div class="wd-in"><h4>${WNAMES.notas}<button class="x" title="Ocultar">${icon('x')}</button></h4><div class="body"></div></div>`;
+      document.body.appendChild(el);
+      RENDER.notas($('.body', el)); ro.observe(el); liquido(el); layoutWidgets();
+      return;
+    }
+    ta.value = e.texto; ta.scrollTop = ta.scrollHeight;
+    return;
+  }
+  if (window._iaEvento) window._iaEvento(e);
+});
 mountWidgets();
 if (window.LiquidGlass) LiquidGlass.controles(); // tarjetas que rebotan al apretarlas
 

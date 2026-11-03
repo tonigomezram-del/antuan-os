@@ -191,6 +191,8 @@ const HERRAMIENTAS = [
     ['escribir_texto', 'Escribe texto en la ventana activa.', { texto: '' }, ['texto']]
   ] : []),
   ['energia', 'Bloquea, suspende, reinicia o apaga el PC.', { accion: ['bloquear', 'suspender', 'reiniciar', 'apagar'] }, ['accion']],
+  ['buscar_info', 'Busca información sobre un tema en internet (Wikipedia), abre la página en el navegador y devuelve el texto.', { tema: '', navegador: ['predeterminado', 'chrome', 'firefox'] }, ['tema']],
+  ['anadir_nota', 'Añade texto al widget de Notas. Con pegar_resultado=true pega lo último que encontró buscar_info.', { texto: '', pegar_resultado: ['true', 'false'] }, []],
   ['info_sistema', 'Estado del PC: memoria, disco, batería, red y lo que más gasta.', {}, []]
 ].map(([name, description, props, required]) => ({
   type: 'function',
@@ -278,6 +280,23 @@ async function usar(nombre, a = {}) {
       if ((acc === 'restart' || acc === 'shutdown') && !(await confirmar(acc === 'restart' ? 'Reiniciar el PC' : 'Apagar el PC'))) return { error: 'El usuario no lo ha permitido' };
       setTimeout(() => ipcMain.emit('power', {}, acc), 600); return { ok: true };
     }
+    case 'buscar_info': {
+      const r = await buscarWikipedia(String(a.tema || ''));
+      if (!r) return { error: 'No he encontrado nada sobre eso' };
+      ultimo = r; abrirWeb(r.url, a.navegador);
+      // al modelo solo le llega un trozo: para pegarlo entero en notas no tiene que reescribirlo (es lo lento)
+      return { titulo: r.titulo, resumen: r.texto.slice(0, 280), url: r.url };
+    }
+    case 'anadir_nota': {
+      const pegar = a.pegar_resultado === 'true' || a.pegar_resultado === true || !a.texto;
+      if (pegar && !ultimo) return { error: 'No hay nada buscado todavía: usa buscar_info primero' };
+      const nuevo = pegar ? `${ultimo.titulo}\n${ultimo.texto}\n(${ultimo.url})` : String(a.texto);
+      const antes = String(await ASKS_.notes() || '').trimEnd();
+      const todo = (antes ? antes + '\n\n' : '') + nuevo;
+      await ASKS_.saveNotes(todo);
+      emitir('notas', { texto: todo });
+      return { ok: true, nota_añadida: pegar ? ultimo.titulo : nuevo.slice(0, 60) };
+    }
     case 'info_sistema': {
       const r = { sistema: LINUX ? 'Antuan OS' : 'Windows', procesador: os.cpus()[0]?.model, nucleos: os.cpus().length, memoria_gb: +(os.totalmem() / 2 ** 30).toFixed(1), memoria_libre_gb: +(os.freemem() / 2 ** 30).toFixed(1), encendido_horas: +(os.uptime() / 3600).toFixed(1), modelo_ia: modelo() };
       if (LINUX) Object.assign(r, { disco: (await sh('df -h / /home 2>/dev/null', 5000)).salida, bateria: (await sh('cat /sys/class/power_supply/BAT*/capacity 2>/dev/null', 3000)).salida.trim() || 'sin batería', red: (await sh("nmcli -t -f NAME,TYPE connection show --active 2>/dev/null", 5000)).salida, procesos_que_mas_gastan: (await sh('ps -eo comm,%cpu,%mem --sort=-%cpu | head -8', 5000)).salida });
@@ -287,12 +306,42 @@ async function usar(nombre, a = {}) {
   return { error: 'Herramienta desconocida' };
 }
 
+// ---------------------------------------------------------------- Internet
+let ultimo = null, ASKS_ = null;   // lo ultimo que encontro buscar_info; ASKS de main.js (notas)
+const https = require('https');
+const getJSON = (url) => new Promise((resolve) => {
+  const req = https.get(url, { headers: { 'User-Agent': 'AntuanAI/1.0 (Antuan OS)' }, timeout: 8000 }, (r) => {
+    let d = ''; r.setEncoding('utf8'); r.on('data', (c) => { d += c; });
+    r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(null); } });
+  });
+  req.on('timeout', () => req.destroy()); req.on('error', () => resolve(null));
+});
+// Wikipedia en espanol: busca el articulo y saca su resumen (la introduccion entera, sin formato)
+async function buscarWikipedia(tema) {
+  if (!tema.trim()) return null;
+  const b = await getJSON(`https://es.wikipedia.org/w/api.php?action=query&list=search&srlimit=1&format=json&srsearch=${encodeURIComponent(tema)}`);
+  const titulo = b && b.query && b.query.search && b.query.search[0] && b.query.search[0].title;
+  if (!titulo) return null;
+  const p = await getJSON(`https://es.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&titles=${encodeURIComponent(titulo)}`);
+  const pag = p && p.query && Object.values(p.query.pages || {})[0];
+  const texto = (pag && pag.extract || '').replace(/\n{2,}/g, '\n').trim();
+  if (!texto) return null;
+  return { titulo, texto: texto.slice(0, 1500), url: 'https://es.wikipedia.org/wiki/' + encodeURIComponent(titulo.replace(/ /g, '_')) };
+}
+function abrirWeb(url, navegador) {
+  const cmds = { chrome: ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'], firefox: ['firefox', 'firefox-esr'] }[navegador];
+  if (LINUX && cmds) for (const c of cmds) {
+    if (['/usr/bin/', '/usr/local/bin/', '/snap/bin/'].some((d) => fs.existsSync(d + c))) { const p = spawn(c, [url], { detached: true, stdio: 'ignore' }); p.on('error', () => { }); p.unref(); return; }
+  }
+  shell.openExternal(url);
+}
+
 // ---------------------------------------------------------------- Conversacion
 // El texto del sistema no cambia nunca (la hora va en cada mensaje): asi Ollama reutiliza lo ya leido y
 // en un PC lento no vuelve a procesar las instrucciones y las herramientas en cada pregunta.
 function sistema() {
   return `Eres Antuan AI, el asistente de ${LINUX ? 'Antuan OS (Debian Linux)' : 'Antuan en Windows'}. Usuario: ${os.userInfo().username}, carpeta personal: ${os.homedir()}.
-Habla en español, de tú. Contesta corto (una o dos frases) y seguro, sin dudar en voz alta. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}${hibrido(modelo()) ? ' /no_think' : ''}`;
+Habla en español, de tú. Contesta corto (una o dos frases) y seguro, sin dudar en voz alta. Usa tus herramientas para HACER lo que te pidan, encadenándolas si hace falta, y di en una frase qué has hecho. Si algo falla, dilo; no inventes resultados. Para información de internet usa buscar_info; para guardarla en Notas, anadir_nota con pegar_resultado=true.${LINUX ? ' Para instalar programas: pkexec apt-get install -y <paquete>.' : ''}${hibrido(modelo()) ? ' /no_think' : ''}`;
 }
 // "think" solo se manda a los modelos que lo entienden (a los demas Ollama les da error)
 const pensar = () => (hibrido(modelo()) ? { think: false } : {});
@@ -361,7 +410,7 @@ async function enviar(texto) {
 
 module.exports = {
   registrar(c, ASKS) {
-    ctx = c;
+    ctx = c; ASKS_ = ASKS;
     ASKS['ia.estado'] = () => estado();
     ASKS['ia.enviar'] = (t) => { enviar(t); return true; };   // la respuesta llega por el canal 'ia'
     ASKS['ia.confirmar'] = (id, si) => { const f = pendientes.get(id); if (f) f(si); return true; };

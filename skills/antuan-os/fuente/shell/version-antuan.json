@@ -1,7 +1,8 @@
 {
-  "version": "1.3.4",
+  "version": "1.3.5",
   "fecha": "2026-11-03",
   "cambios": [
+    "Antuan AI busca información en internet (Wikipedia), te abre la página en el navegador y la pega en tus Notas al momento",
     "Antuan AI en PCs sin tarjeta gráfica usa siempre el modelo rápido (Qwen 2.5 1.5B), aunque tengan mucha memoria",
     "Antuan AI contesta directamente: modelos sin «modo pensar» (Qwen 3 4B Instruct y Qwen 2.5), nada de razonar en inglés antes de responder",
     "Mucho más rápida en PCs sin tarjeta gráfica: modelo más ligero, la mitad de instrucciones y respuestas cortas",
