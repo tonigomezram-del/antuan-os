@@ -28,7 +28,7 @@ svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-widt
 #clock .g { margin-top: 4px; font-size: 13px; color: var(--muted); }
 
 /* Grupos */
-#groups { position: fixed; top: var(--pad-t); left: var(--pad-l); bottom: var(--pad-b); right: var(--groups-right, 420px); display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 22px 40px; }
+#groups { position: fixed; top: var(--pad-t); left: var(--pad-l); bottom: calc(var(--pad-b) + var(--ia-h, 0px)); right: var(--groups-right, 420px); display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 22px 40px; }
 body.cards #groups { gap: 16px 16px; }
 .group { animation: fadeUp .6s var(--ease) both; animation-delay: calc(var(--g) * 70ms); }
 /* Estilo tarjetas: cada grupo en su cristal, como los widgets */
@@ -140,6 +140,34 @@ body.cards .group { box-shadow: 0 22px 50px -22px rgba(0,0,0,.75), inset 0 1.6px
 .meter span:last-child { text-align: right; color: var(--muted); }
 .notes { width: 100%; min-height: 110px; resize: vertical; background: none; border: 0; outline: none; color: inherit; font-family: inherit; font-size: 13.5px; line-height: 1.55; padding: 0; }
 .notes::placeholder { color: var(--faint); }
+/* Antuan AI */
+.wd[data-w="ia"] { width: min(560px, calc(100vw - 48px)); }
+.ia-chat { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; font-size: 13.5px; line-height: 1.5; scrollbar-width: thin; }
+.ia-chat:empty { display: none; }
+.ia-chat .yo { align-self: flex-end; max-width: 85%; padding: 7px 12px; border-radius: 16px 16px 4px 16px; background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.ia-chat .ia { align-self: flex-start; max-width: 95%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ia-chat .hz { align-self: flex-start; font-size: 11.5px; color: var(--muted); padding: 3px 9px; border-radius: 9px; background: rgba(255,255,255,.06); }
+.ia-chat .hz.mal { color: #ff9a8a; }
+.ia-chat .conf { align-self: stretch; padding: 10px 12px; border-radius: 14px; background: rgba(255,170,60,.12); font-size: 12.5px; }
+.ia-chat .conf code { display: block; margin: 4px 0 8px; font-size: 12px; overflow-wrap: anywhere; color: var(--text); }
+.ia-chat .conf div { display: flex; gap: 6px; }
+.ia-chat .conf button { flex: 1; border: 0; border-radius: 9px; padding: 6px; background: rgba(255,255,255,.1); color: inherit; font: 600 12px inherit; }
+.ia-chat .conf button.si { background: var(--accent); color: #0b0d14; }
+.ia-chat .err { color: #ff9a8a; font-size: 12.5px; }
+.ia-est { font-size: 12.5px; color: var(--muted); }
+.ia-est .bar { height: 5px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 8px; }
+.ia-est .bar i { display: block; height: 100%; width: var(--p, 0%); background: var(--accent); transition: width .6s var(--ease); }
+.ia-est .btnw { margin-top: 10px; }
+.ia-in { display: flex; gap: 8px; margin-top: 12px; }
+.ia-in input { flex: 1; min-width: 0; background: rgba(255,255,255,.08); border: 0; border-radius: 14px; padding: 9px 13px; color: inherit; font: inherit; font-size: 13.5px; outline: none; }
+.ia-in input:focus { background: rgba(255,255,255,.12); }
+.ia-in button { width: 38px; border: 0; border-radius: 14px; background: var(--accent); color: #0b0d14; font-size: 15px; }
+.ia-in button.parar { background: rgba(255,255,255,.14); color: inherit; }
+/* con conversacion, el cristal se oscurece para que el texto se lea sobre cualquier cosa */
+.wd[data-w="ia"].lg:has(.ia-chat:not(:empty)) { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01) 55%), rgba(14,16,22,.72); }
+.wd[data-w="ia"] h4 { margin-bottom: 8px; }
+.ia-chat:not(:empty) + .ia-est + .ia-in, .ia-chat:not(:empty) ~ .ia-in { margin-top: 12px; }
+.ia-in:first-child, .ia-chat:empty ~ .ia-in { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -291,8 +319,8 @@ document.addEventListener('contextmenu', (e) => {
 });
 
 /* ---------------- Widgets ---------------- */
-const WIDGETS = ['tiempo', 'musica', 'sistema', 'notas'];
-const WNAMES = { tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
+const WIDGETS = ['ia', 'tiempo', 'musica', 'sistema', 'notas'];
+const WNAMES = { ia: 'Antuan AI', tiempo: 'Tiempo', musica: 'Música', sistema: 'Sistema', notas: 'Notas' };
 let cfg = info.config;
 U.on('config', (c) => {
   const antes = cfg.liquidGlass !== false;
@@ -310,7 +338,7 @@ U.on('config', (c) => {
 });
 if (window.LiquidGlass) LiquidGlass.alCambiar(() => grupoLiquido());
 if (window.LiquidGlass) LiquidGlass.ajustar(LiquidGlass.desdeConfig(cfg));
-const wcfg = () => Object.assign({ tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
+const wcfg = () => Object.assign({ ia: { on: true }, tiempo: { on: true }, musica: { on: true }, sistema: { on: false }, notas: { on: false } }, cfg.widgets || {});
 function saveW(id, patch) { const w = wcfg(); w[id] = Object.assign({}, w[id], patch); cfg.widgets = w; U.config({ widgets: w }); }
 
 // Colocacion automatica: columna bajo el reloj y, si no cabe, otra columna a su izquierda.
@@ -319,15 +347,32 @@ function layoutWidgets() {
   const padR = parseInt(css.getPropertyValue('--pad-r')), padT = parseInt(css.getPropertyValue('--pad-t')), padB = parseInt(css.getPropertyValue('--pad-b'));
   const clockBottom = $('#clock').getBoundingClientRect().bottom + 22, W = 300, gap = 14;
   let col = 0, y = clockBottom;
+  // los que has movido tu se quedan donde estan; los demas los esquivan
+  const fijos = $$('.wd').filter((el) => el.dataset.custom).map((el) => el.getBoundingClientRect());
   for (const el of $$('.wd')) {
-    if (el.dataset.custom) continue;
-    const h = el.offsetHeight;
-    if (y + h > innerHeight - padB && y > padT + 1) { col++; y = padT; }
-    el.style.left = (innerWidth - padR - 12 - W - col * (W + gap)) + 'px';
+    if (el.dataset.custom || el.dataset.w === 'ia') continue;
+    const h = el.offsetHeight, w = el.offsetWidth;
+    for (let intento = 0; intento < 30; intento++) {
+      if (y + h > innerHeight - padB && y > padT + 1) { col++; y = padT; }
+      const x = innerWidth - padR - 12 - W - col * (W + gap) + W - w;
+      const choca = fijos.find((r) => x < r.right + gap && x + w > r.left - gap && y < r.bottom + gap && y + h > r.top - gap);
+      if (!choca) break;
+      y = choca.bottom + gap;
+    }
+    el.style.left = (innerWidth - padR - 12 - W - col * (W + gap) + W - w) + 'px';
     el.style.top = y + 'px';
     y += h + gap;
   }
   document.documentElement.style.setProperty('--groups-right', (padR + 12 + (col + 1) * (W + gap) + 24) + 'px');
+  // Antuan AI va centrada abajo, encima del dock; los grupos le dejan su hueco (sin contar el chat, que crece por encima)
+  const ia = $('.wd[data-w="ia"]'), chat = ia && $('.ia-chat', ia);
+  let reserva = 0;
+  if (ia && !ia.dataset.custom) {
+    ia.style.left = Math.round((innerWidth - ia.offsetWidth) / 2) + 'px';
+    ia.style.top = Math.round(innerHeight - padB - ia.offsetHeight - 14) + 'px';
+    reserva = ia.offsetHeight - (chat ? chat.offsetHeight : 0) + 28;
+  }
+  document.documentElement.style.setProperty('--ia-h', reserva + 'px');
 }
 const ro = new ResizeObserver(() => layoutWidgets());
 addEventListener('resize', layoutWidgets);
@@ -446,8 +491,63 @@ const RENDER = {
     b.innerHTML = `<textarea class="notes" placeholder="Apunta lo que sea. Se guarda solo."></textarea>`;
     const ta = $('textarea', b); ta.value = await U.ask('notes') || '';
     let t; ta.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => U.ask('saveNotes', ta.value), 500); });
+  },
+  // Antuan AI: chat con el modelo local, que hace las cosas en el PC (lo peligroso lo pregunta aqui)
+  async ia(b) {
+    b.innerHTML = `<div class="ia-chat" aria-live="polite"></div><div class="ia-est"></div>
+      <form class="ia-in"><input placeholder="Pídeme lo que sea: «abre Firefox», «pon el dock en barra»…" aria-label="Mensaje para Antuan AI" disabled><button type="submit" aria-label="Enviar">➤</button></form>
+`;
+    const chat = $('.ia-chat', b), est = $('.ia-est', b), form = $('.ia-in', b), inp = $('input', form), btn = $('button', form);
+    let burbuja = null, hablando = false;
+    const bajar = () => { chat.scrollTop = chat.scrollHeight; };
+    const add = (cls, txt) => { const d = document.createElement('div'); d.className = cls; d.textContent = txt; chat.appendChild(d); bajar(); return d; };
+    const NOMBRES = { ejecutar_comando: 'Terminal', abrir_app: 'Abrir', listar_apps: 'Apps', listar_ventanas: 'Ventanas', controlar_ventana: 'Ventana', volumen: 'Volumen', brillo: 'Brillo', cambiar_ajuste: 'Ajuste', buscar_archivos: 'Buscar', abrir: 'Abrir', leer_archivo: 'Leer', escribir_archivo: 'Guardar', pulsar_teclas: 'Teclas', escribir_texto: 'Escribir', energia: 'Energía', info_sistema: 'Sistema' };
+    const ponerEstado = (e) => {
+      const listo = e.estado === 'listo';
+      inp.disabled = !listo; est.hidden = listo;
+      if (listo) { est.innerHTML = ''; return; }
+      if (e.estado === 'sin-ollama') {
+        est.innerHTML = `Antuan AI funciona en tu PC, gratis y sin límites. Falta instalar el motor (Ollama) y el modelo (unos GB).<br><button class="btnw" type="button">Instalar Antuan AI</button>`;
+        $('button', est).onclick = (ev) => { ev.target.disabled = true; ev.target.textContent = 'Instalando… (te pedirá la contraseña)'; U.ask('ia.instalar'); };
+      } else if (e.estado === 'descargando') {
+        est.innerHTML = `${e.texto || 'Descargando el modelo…'}<div class="bar"><i style="--p:${e.progreso || 0}%"></i></div>`;
+      } else if (e.estado === 'arrancando') est.textContent = 'Arrancando Antuan AI…';
+      else if (e.estado === 'error') est.innerHTML = `<span class="err"></span>`, $('.err', est).textContent = e.texto || 'Algo ha fallado';
+    };
+    const ocupado = (si) => { hablando = si; btn.textContent = si ? '■' : '➤'; btn.classList.toggle('parar', si); btn.setAttribute('aria-label', si ? 'Parar' : 'Enviar'); };
+    window._iaEvento = (e) => {
+      if (e.tipo === 'estado') return ponerEstado(e);
+      if (e.tipo === 'texto') { if (!burbuja) burbuja = add('ia', ''); burbuja.textContent += e.texto; bajar(); return; }
+      if (e.tipo === 'herramienta') {
+        burbuja = null;
+        const a = e.args || {}, det = a.comando || a.nombre || a.titulo || a.destino || a.ruta || a.texto || a.teclas || (a.clave ? `${a.clave} → ${a.valor}` : '') || a.nivel || a.accion || '';
+        window._iaChip = add('hz', `⚙ ${NOMBRES[e.nombre] || e.nombre}${det ? ': ' + String(det).slice(0, 60) : ''}`); return;
+      }
+      if (e.tipo === 'resultado') { if (!e.ok && window._iaChip) { window._iaChip.classList.add('mal'); window._iaChip.title = e.error || ''; } return; }
+      if (e.tipo === 'confirmar') {
+        burbuja = null;
+        const c = document.createElement('div'); c.className = 'conf';
+        c.innerHTML = `¿Lo hago?<code></code><div><button class="si" type="button">Sí, hazlo</button><button type="button">No</button></div>`;
+        $('code', c).textContent = e.texto;
+        c.querySelectorAll('button').forEach((x, i) => x.onclick = () => { U.ask('ia.confirmar', e.id, i === 0); c.querySelector('div').remove(); c.append(i === 0 ? ' Permitido.' : ' Cancelado.'); });
+        chat.appendChild(c); bajar(); return;
+      }
+      if (e.tipo === 'error') { burbuja = null; add('err', e.texto); return; }
+      if (e.tipo === 'fin') { burbuja = null; ocupado(false); inp.focus(); }
+    };
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      if (hablando) { U.ask('ia.parar'); return; }
+      const t = inp.value.trim(); if (!t) return;
+      inp.value = ''; burbuja = null; add('yo', t); ocupado(true); U.ask('ia.enviar', t);
+    });
+    // mientras se instala o se descarga, se va mirando el estado
+    const mirar = async () => { const e = await U.ask('ia.estado'); if (!e || !b.isConnected) return; ponerEstado(e); if (e.estado !== 'listo') setTimeout(mirar, e.estado === 'descargando' ? 1500 : 4000); };
+    mirar();
   }
 };
+// los avisos de la IA llegan siempre al widget que este montado en ese momento
+U.on('ia', (e) => { if (window._iaEvento) window._iaEvento(e); });
 mountWidgets();
 if (window.LiquidGlass) LiquidGlass.controles(); // tarjetas que rebotan al apretarlas
 

@@ -887,6 +887,11 @@ ipcMain.on('mute', (_, m) => sis.ask('mute ' + (m ? 1 : 0)));
 ipcMain.handle('brightness', async () => { const r = await sis.json('bri?'); return r && r.ok ? r.level : -1; });
 ipcMain.on('set-brightness', (_, v) => sis.ask('bri ' + v));
 ASKS.sys = (cmd) => sis.json(cmd);
+// Antuan AI: modelo local que maneja el PC; habla con el widget del escritorio por el canal 'ia'
+require('./ia').registrar({
+  config: () => config, catalogo: () => catalog, ventanas: () => native.listWindows(ownPids()),
+  sis, buscador, enviar: (ch, d) => sendDesktop(ch, d)
+}, ASKS);
 ASKS.outputSet = (id) => sis.json('output-set ' + Buffer.from(id, 'utf8').toString('base64'));
 ASKS.mediaCover = (p) => { try { return p && fs.existsSync(p) ? nativeImage.createFromPath(p).resize({ width: 160 }).toDataURL() : null; } catch { return null; } };
 ipcMain.handle('login-item', () => app.getLoginItemSettings(loginArgs()).openAtLogin);

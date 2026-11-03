@@ -1,15 +1,11 @@
 {
-    "version":  "1.2.1",
-    "fecha":  "2026-10-27",
-    "cambios":  [
-                    "Claude, ChatGPT y las demás apps web ya tienen botón de cerrar y salen en la barra de tareas",
-                    "Cristal líquido tipo iOS en el dock, la bandeja, los widgets y las tarjetas, con ajustes en el Centro",
-                    "Estilos de dock: Líquido, Barra (como Windows 11), Gota (experimento) y Clásico",
-                    "Selección líquida en el dock y animaciones con muelle",
-                    "Logos a color, planos y vectoriales para cualquier app",
-                    "24 fondos nuevos hechos para el cristal: paisajes, espacio, minimalistas y cintas",
-                    "Las apps instaladas aparecen solas en el Escritorio y el buscador",
-                    "IAs en la Tienda: Claude, Claude Code, ChatGPT, Gemini y más",
-                    "Actualizaciones de Antuan desde este panel"
-                ]
+  "version": "1.3.0",
+  "fecha": "2026-11-03",
+  "cambios": [
+    "Antuan AI: una IA que funciona en tu PC, gratis y sin límites, y que maneja el sistema: abre apps, controla ventanas, cambia ajustes, volumen y brillo, busca y crea archivos y usa la terminal",
+    "Antuan AI pregunta antes de hacer algo delicado (borrar, instalar, apagar...)",
+    "El motor (Ollama) se instala con la actualización y el modelo se descarga solo la primera vez, con el progreso en su widget",
+    "Los widgets nuevos ya no tapan a los que has movido tú",
+    "Claude, ChatGPT y las demás apps web tienen botón de cerrar y salen en la barra de tareas"
+  ]
 }

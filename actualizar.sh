@@ -16,6 +16,12 @@ cp "$NUEVO"/*.js "$NUEVO"/*.ps1 "$NUEVO"/*.json "$APP"/ 2>/dev/null || true
 cp -r "$NUEVO"/ui/. "$APP"/ui/
 chmod -R a+rX "$APP"
 rm -rf "$T"
+# Antuan AI: el motor de IA local (Ollama). El modelo lo descarga luego el propio escritorio, con el progreso en su widget.
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "[ 80%] Instalando el motor de Antuan AI (Ollama, puede tardar unos minutos)..."
+  curl -fsSL https://ollama.com/install.sh | sh || echo "No se pudo instalar Ollama: se puede instalar luego desde el widget Antuan AI"
+fi
+command -v xdotool >/dev/null 2>&1 || apt-get install -y xdotool >/dev/null 2>&1 || true
 echo "[ 90%] Reiniciando el escritorio Antuan..."
 pkill -TERM -f '^/opt/umbra/umbra' || true   # la sesion lo vuelve a abrir solo en un segundo
 echo "[100%] Antuan actualizado."
