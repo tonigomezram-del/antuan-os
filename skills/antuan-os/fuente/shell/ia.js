@@ -33,7 +33,7 @@ function ficha(m) {
 
 let ctx = null;                // lo que pasa main.js: config, catalogo, ventanas, sistema, buscador, envio al escritorio
 let historial = [];
-let ocupado = false, cancelar = null, descargando = null;
+let ocupado = false, parado = false, cancelar = null, descargando = null;
 const pendientes = new Map();   // confirmaciones esperando al usuario
 
 // En Antuan OS la actualizacion elige el modelo, lo descarga y deja aqui el progreso
@@ -193,6 +193,9 @@ const HERRAMIENTAS = [
   ['energia', 'Bloquea, suspende, reinicia o apaga el PC.', { accion: ['bloquear', 'suspender', 'reiniciar', 'apagar'] }, ['accion']],
   ['buscar_info', 'Busca información sobre un tema en internet (Wikipedia), abre la página en el navegador y devuelve el texto.', { tema: '', navegador: ['predeterminado', 'chrome', 'firefox'] }, ['tema']],
   ['anadir_nota', 'Añade texto al widget de Notas. Con pegar_resultado=true pega lo último que encontró buscar_info.', { texto: '', pegar_resultado: ['true', 'false'] }, []],
+  ['leer_notas', 'Lee lo que hay en el widget de Notas.', {}, []],
+  ['editar_notas', 'Borra o cambia texto de las Notas: borrar_todo, borrar (quita ese texto) o reemplazar (texto por nuevo).', { accion: ['borrar_todo', 'borrar', 'reemplazar'], texto: '', nuevo: '' }, ['accion']],
+  ['esperar', 'Espera unos segundos (por ejemplo a que cargue una web) antes de la siguiente acción.', { segundos: '' }, ['segundos']],
   ['info_sistema', 'Estado del PC: memoria, disco, batería, red y lo que más gasta.', {}, []]
 ].map(([name, description, props, required]) => ({
   type: 'function',
@@ -217,7 +220,11 @@ async function usar(nombre, a = {}) {
     }
     case 'abrir_app': {
       const ap = buscarApp(a.nombre); if (!ap) return { error: 'No encuentro esa app instalada', apps_instaladas: ctx.catalogo().map((x) => x.display || x.name).filter(Boolean).slice(0, 60) };
-      ipcMain.emit('launch', {}, ap.id); return { ok: true, abierta: ap.display || ap.name };
+      // espera a que salga su ventana: asi lo siguiente (escribir, pulsar teclas) va sobre ella y en orden
+      const antes = new Set((await ctx.ventanas()).map((w) => w.id));
+      ipcMain.emit('launch', {}, ap.id);
+      const v = await esperarVentana(antes, 10000);
+      return v ? { ok: true, abierta: ap.display || ap.name, ventana: v.title } : { ok: true, abierta: ap.display || ap.name, aviso: 'Aún no ha salido su ventana' };
     }
     case 'listar_apps': {
       const f = String(a.filtro || '').toLowerCase();
@@ -258,7 +265,7 @@ async function usar(nombre, a = {}) {
     }
     case 'abrir': {
       const d = String(a.destino || '').trim();
-      if (/^https?:\/\//i.test(d)) { shell.openExternal(d); return { ok: true }; }
+      if (/^https?:\/\//i.test(d)) { shell.openExternal(d); await dormir(2500); return { ok: true, abierta: d }; }   // que cargue antes de seguir
       const p = ruta(d); if (!fs.existsSync(p)) return { error: 'No existe: ' + p };
       const e = await shell.openPath(p); return e ? { error: e } : { ok: true, abierto: p };
     }
@@ -298,6 +305,24 @@ async function usar(nombre, a = {}) {
       emitir('notas', { texto: todo });
       return { ok: true, nota_añadida: pegar ? ultimo.titulo : nuevo.slice(0, 60) };
     }
+    case 'leer_notas': return { notas: String(await ASKS_.notes() || '').slice(0, 4000) || '(vacías)' };
+    case 'editar_notas': {
+      const antes = String(await ASKS_.notes() || ''), acc = String(a.accion || ''), t = String(a.texto || '');
+      let todo;
+      if (acc === 'borrar_todo') todo = '';
+      else if (!t) return { error: 'Falta el texto que hay que borrar o cambiar' };
+      else if (!antes.toLowerCase().includes(t.toLowerCase())) return { error: 'Ese texto no está en las notas', notas: antes.slice(0, 1500) };
+      else {
+        // sin distinguir mayusculas. "borrar" quita cada bloque (lo separado por una linea en blanco) que lo contenga:
+        // "borra lo de los pajaros" se lleva la nota entera de los pajaros, no solo la palabra
+        const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        todo = acc === 'reemplazar' ? antes.replace(re, String(a.nuevo ?? ''))
+          : antes.split(/\n[ \t]*\n/).filter((b) => !b.toLowerCase().includes(t.toLowerCase())).join('\n\n').trim();
+      }
+      await ASKS_.saveNotes(todo); emitir('notas', { texto: todo });
+      return { ok: true, notas_ahora: todo.slice(0, 300) || '(vacías)' };
+    }
+    case 'esperar': { await dormir(Math.max(0.2, Math.min(10, +a.segundos || 1)) * 1000); return { ok: true }; }
     case 'info_sistema': {
       const r = { sistema: LINUX ? 'Antuan OS' : 'Windows', procesador: os.cpus()[0]?.model, nucleos: os.cpus().length, memoria_gb: +(os.totalmem() / 2 ** 30).toFixed(1), memoria_libre_gb: +(os.freemem() / 2 ** 30).toFixed(1), encendido_horas: +(os.uptime() / 3600).toFixed(1), modelo_ia: modelo() };
       if (LINUX) Object.assign(r, { disco: (await sh('df -h / /home 2>/dev/null', 5000)).salida, bateria: (await sh('cat /sys/class/power_supply/BAT*/capacity 2>/dev/null', 3000)).salida.trim() || 'sin batería', red: (await sh("nmcli -t -f NAME,TYPE connection show --active 2>/dev/null", 5000)).salida, procesos_que_mas_gastan: (await sh('ps -eo comm,%cpu,%mem --sort=-%cpu | head -8', 5000)).salida });
@@ -305,6 +330,18 @@ async function usar(nombre, a = {}) {
     }
   }
   return { error: 'Herramienta desconocida' };
+}
+
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Espera a que aparezca una ventana nueva (la de la app que se acaba de abrir); si el usuario para, deja de esperar
+async function esperarVentana(antes, max) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < max && !parado) {
+    await dormir(400);
+    const v = (await ctx.ventanas()).find((w) => !antes.has(w.id));
+    if (v) { await dormir(600); return v; }   // un momento mas para que termine de dibujarse
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------- Internet
@@ -351,7 +388,7 @@ const ESQUEMA = {
   required: ['respuesta', 'acciones']
 };
 // Herramientas que solo hacen algo (no traen datos que haya que contar): si todas salen bien, no hace falta otra vuelta
-const SOLO_HACEN = new Set(['abrir_app', 'controlar_ventana', 'volumen', 'brillo', 'cambiar_ajuste', 'abrir', 'pulsar_teclas', 'escribir_texto', 'energia', 'anadir_nota']);
+const SOLO_HACEN = new Set(['esperar', 'editar_notas', 'abrir_app', 'controlar_ventana', 'volumen', 'brillo', 'cambiar_ajuste', 'abrir', 'pulsar_teclas', 'escribir_texto', 'energia', 'anadir_nota']);
 const firma = (h) => {
   const p = h.function.parameters.properties;
   return `${h.function.name}(${Object.entries(p).map(([k, v]) => (v.enum ? `${k}: ${v.enum.join('|')}` : k)).join(', ')}): ${h.function.description}`;
@@ -366,10 +403,11 @@ Si te piden hacer algo, pon YA en "acciones" todas las acciones necesarias, en o
 Después de hacer las acciones recibirás sus resultados: si falta algo, pon más acciones; si ya está, "acciones": [] y di en una frase qué has hecho. No inventes resultados.
 Herramientas:
 ${HERRAMIENTAS.map((h) => '- ' + firma(h)).join('\n')}
-Información de internet: buscar_info; para guardarla en Notas, después anadir_nota con pegar_resultado "true".${LINUX ? ' Instalar programas: ejecutar_comando con "pkexec apt-get install -y <paquete>".' : ''}
+Las acciones se hacen en orden, una detrás de otra (abrir_app espera a que salga la ventana; si hace falta más tiempo, esperar). Información de internet: buscar_info; para guardarla en Notas, después anadir_nota con pegar_resultado "true".${LINUX ? ' Instalar programas: ejecutar_comando con "pkexec apt-get install -y <paquete>".' : ''}
 Ejemplos:
 "hola" -> {"respuesta":"¡Hola! ¿Qué hago por ti?","acciones":[]}
 "abre firefox y sube el volumen" -> {"respuesta":"Abro Firefox y subo el volumen.","acciones":[{"herramienta":"abrir_app","args":{"nombre":"firefox"}},{"herramienta":"volumen","args":{"nivel":"80"}}]}
+"borra lo de los gatos de las notas" -> {"respuesta":"Borro de tus notas lo de los gatos.","acciones":[{"herramienta":"editar_notas","args":{"accion":"borrar","texto":"gatos"}}]}
 "busca info de los gatos y ponla en notas" -> {"respuesta":"Busco sobre los gatos y lo pego en tus notas.","acciones":[{"herramienta":"buscar_info","args":{"tema":"gatos"}},{"herramienta":"anadir_nota","args":{"pegar_resultado":"true"}}]}${hibrido(modelo()) ? '\n/no_think' : ''}`;
 }
 // "think" solo se manda a los modelos que lo entienden (a los demas Ollama les da error)
@@ -396,17 +434,20 @@ function respuestaParcial(json) {
 }
 
 async function enviar(texto) {
-  if (ocupado) return { error: 'Espera a que termine' };
+  // el widget espera siempre un "fin": si no se puede atender, se le dice por que y se le da su fin
+  // (antes se quedaba esperando para siempre y ya no respondia a nada)
+  const rechazar = (t) => { emitir('error', { texto: t }); emitir('fin'); return { error: t }; };
+  if (ocupado) return rechazar('Aún estoy con lo anterior: dale a ■ para pararlo.');
   calentado = true;   // la pregunta ya carga el modelo: no hace falta precalentar a la vez
-  const e = await estado();
-  if (e.estado !== 'listo') { emitir('estado', e); return { error: 'Antuan AI aún no está lista' }; }
-  ocupado = true;
+  ocupado = true; parado = false;
+  const e = await estado().catch(() => ({ estado: 'error' }));
+  if (e.estado !== 'listo') { ocupado = false; emitir('estado', e); return rechazar('Antuan AI aún no está lista.'); }
   if (!historial.length) historial.push({ role: 'system', content: '' });
   historial[0].content = sistema();
   historial.push({ role: 'user', content: conHora(String(texto)) });
   const hechas = new Set();
   try {
-    for (let paso = 0; paso < 6; paso++) {
+    for (let paso = 0; paso < 6 && !parado; paso++) {
       let crudo = '', dicho = '';
       emitir('pensando');
       await peticion('/api/chat', pedido(historial, { stream: true }), (l) => {
@@ -425,6 +466,7 @@ async function enviar(texto) {
       if (!acciones.length) break;
       const resultados = [];
       for (const a of acciones) {
+        if (parado) break;   // ■: no se hace nada mas
         hechas.add(JSON.stringify(a));
         const args = a.args && typeof a.args === 'object' ? a.args : {};
         emitir('herramienta', { nombre: a.herramienta, args });
@@ -459,7 +501,7 @@ module.exports = {
     ASKS['ia.estado'] = () => estado();
     ASKS['ia.enviar'] = (t) => { enviar(t); return true; };   // la respuesta llega por el canal 'ia'
     ASKS['ia.confirmar'] = (id, si) => { const f = pendientes.get(id); if (f) f(si); return true; };
-    ASKS['ia.parar'] = () => { if (cancelar) cancelar(); for (const f of pendientes.values()) f(false); return true; };
+    ASKS['ia.parar'] = () => { parado = true; if (cancelar) cancelar(); for (const f of pendientes.values()) f(false); return true; };
     ASKS['ia.olvidar'] = () => { historial = []; return true; };
     ASKS['ia.instalar'] = () => instalarOllama();
     // en cuanto Antuan arranca se comprueba: si falta el modelo se empieza a bajar solo
